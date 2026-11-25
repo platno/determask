@@ -53,6 +53,40 @@ describe("matchKnownValues (D11)", () => {
     expect(span!.trace[0]!.rule).toBe("known-value");
   });
 
+  it("matches across scripts: a Latin value finds the Cyrillic spelling, and back", () => {
+    expect(surfaces("Пацијент Петар Петровић", { PERSON: ["Petar Petrović"] })).toEqual(["Петар Петровић"]);
+    expect(surfaces("Pacijent Petar Petrović", { PERSON: ["Петар Петровић"] })).toEqual(["Petar Petrović"]);
+  });
+
+  it("finds a number whatever its grouping, in the text or in the record", () => {
+    const text = "SĐT 0912 345 678, zalo 0912.345.678, cũ 0912-345-678, mới 0912345678";
+    expect(surfaces(text, { PHONE_NUMBER: ["0912345678"] })).toHaveLength(4);
+    expect(surfaces(text, { PHONE_NUMBER: ["(091) 234-5678"] })).toHaveLength(4);
+  });
+
+  it("finds a number glued to its label, and written in another script's digits", () => {
+    expect(surfaces("SĐT0912345678", { PHONE_NUMBER: ["0912345678"] })).toEqual(["0912345678"]);
+    expect(surfaces("هاتف ٠٩١٢٣٤٥٦٧٨", { PHONE_NUMBER: ["0912345678"] })).toEqual(["٠٩١٢٣٤٥٦٧٨"]);
+  });
+
+  it("does not find a number inside a longer one", () => {
+    expect(surfaces("10912345678 and 09123456789", { PHONE_NUMBER: ["0912345678"] })).toEqual([]);
+  });
+
+  it("treats a removed separator as a boundary, so a neighbouring number is not glued on", () => {
+    expect(surfaces("Giường 12 0912345678", { PHONE_NUMBER: ["0912345678"] })).toEqual(["0912345678"]);
+    expect(surfaces("0912345678 99", { PHONE_NUMBER: ["0912345678"] })).toEqual(["0912345678"]);
+  });
+
+  it("keeps a leading + outside the match", () => {
+    expect(surfaces("+84 912 345 678", { PHONE_NUMBER: ["84912345678"] })).toEqual(["84 912 345 678"]);
+  });
+
+  it("matches short numbers and numbers with letters as ordinary words", () => {
+    expect(surfaces("room 12345, room 12 345", { ROOM: ["12345"] })).toEqual(["12345"]); // under 6 digits
+    expect(surfaces("MRN A-123456 and A123456", { MRN: ["A-123456"] })).toEqual(["A-123456"]); // has a letter
+  });
+
   it("does not find a value that is only part of a longer word on both sides", () => {
     expect(surfaces("aaa", { PERSON: ["aa"] })).toEqual([]);
     expect(surfaces("aa aa", { PERSON: ["aa"] })).toEqual(["aa", "aa"]);
