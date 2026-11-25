@@ -43,8 +43,12 @@ const PLACEHOLDER = /⟦[A-Z][A-Z0-9_]*_\d+⟧/gu;
 /** Entity ids (catalogue convention): SCREAMING_SNAKE. */
 const ENTITY_ID = /^[A-Z][A-Z0-9_]*$/;
 
-const KNOWN_CONFIG_KEYS = new Set(["configVersion", "name", "locales", "onError"]);
+const KNOWN_CONFIG_KEYS = new Set(["configVersion", "name", "locales", "thresholds", "onError"]);
 const KNOWN_LOCALES_KEYS = new Set(["primary", "also"]);
+const KNOWN_THRESHOLD_KEYS = new Set(["default", "perEntity"]);
+
+/** D7: a finding below this score is not returned, unless configured otherwise. */
+export const DEFAULT_THRESHOLD = 0.5;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -87,6 +91,46 @@ function validateConfig(config: EngineConfig): void {
       throw new ConfigError("config.locales.also must be an array of strings");
     }
   }
+  if (config.thresholds !== undefined) validateThresholds(config.thresholds);
+}
+
+const isScore = (v: unknown): boolean => typeof v === "number" && v >= 0 && v <= 1;
+
+function validateThresholds(thresholds: unknown): void {
+  if (!isPlainObject(thresholds)) throw new ConfigError("config.thresholds must be an object");
+  for (const key of Object.keys(thresholds)) {
+    if (!KNOWN_THRESHOLD_KEYS.has(key)) {
+      throw new ConfigError(`unknown config key: ${JSON.stringify(`thresholds.${key}`)}`);
+    }
+  }
+  if (thresholds["default"] !== undefined && !isScore(thresholds["default"])) {
+    throw new ConfigError("config.thresholds.default must be a number in [0, 1]");
+  }
+  const perEntity = thresholds["perEntity"];
+  if (perEntity !== undefined) {
+    if (!isPlainObject(perEntity)) throw new ConfigError("config.thresholds.perEntity must be an object");
+    for (const [entity, value] of Object.entries(perEntity)) {
+      assertEntityId(entity, "config.thresholds.perEntity", ConfigError);
+      if (!isScore(value)) {
+        throw new ConfigError(`config.thresholds.perEntity.${entity} must be a number in [0, 1]`);
+      }
+    }
+  }
+}
+
+/**
+ * D10: same-type duplicates are removed in the analyzer — two patterns or
+ * two recognizers reporting the same entity over the same range keep only
+ * the highest-scoring span (the first one, on a tie).
+ */
+function dedupeSameType(findings: readonly Span[]): Span[] {
+  const best = new Map<string, Span>();
+  for (const span of findings) {
+    const key = `${span.entity}\u0000${span.start}\u0000${span.end}`;
+    const seen = best.get(key);
+    if (seen === undefined || span.score > seen.score) best.set(key, span);
+  }
+  return [...best.values()];
 }
 
 function assertEntityId(entity: unknown, where: string, Err: typeof ConfigError): void {
@@ -170,6 +214,25 @@ function isValidSpan(span: Span, length: number): boolean {
   );
 }
 
+const HTML_ESCAPES: Readonly<Record<string, string>> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+/**
+ * How a restored value is written into the text it goes back into. A value
+ * restored raw into HTML or JSON is an injection: a name like
+ * `</span><b>` would become markup (cf. flare-redact GHSA-4c5j-9f3p-p7mh).
+ */
+const ESCAPERS: Readonly<Record<string, (value: string) => string>> = {
+  text: (value) => value,
+  html: (value) => value.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c] as string),
+  json: (value) => JSON.stringify(value).slice(1, -1),
+};
+
 const isHigh = (u: number): boolean => u >= 0xd800 && u <= 0xdbff;
 const isLow = (u: number): boolean => u >= 0xdc00 && u <= 0xdfff;
 
@@ -188,6 +251,10 @@ function snapToCodePoints(span: Span, text: string): Span {
 export function createEngine(config: EngineConfig, options: EngineOptions = {}): Engine {
   validateConfig(config);
   const recognizers = collectRecognizers(options);
+  const defaultThreshold = config.thresholds?.default ?? DEFAULT_THRESHOLD;
+  const perEntity = config.thresholds?.perEntity ?? {};
+  const threshold = (entity: string): number =>
+    Object.hasOwn(perEntity, entity) ? (perEntity[entity] as number) : defaultThreshold;
 
   function analyze(text: string, analyzeOptions: AnalyzeOptions = {}): AnalyzeResult {
     const locale = analyzeOptions.locale ?? config.locales?.primary;
@@ -225,8 +292,9 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
       findings.push(...spans);
     }
 
-    findings.sort((a, b) => a.start - b.start || a.end - b.end);
-    return { findings };
+    const kept = dedupeSameType(findings).filter((f) => f.score >= threshold(f.entity));
+    kept.sort((a, b) => a.start - b.start || a.end - b.end);
+    return { findings: kept };
   }
 
   function anonymize(
@@ -285,6 +353,9 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
     restoreOptions: RestoreOptions = {},
   ): string {
     const strict = restoreOptions.strict ?? true;
+    const format = restoreOptions.format ?? "text";
+    const escape = ESCAPERS[format];
+    if (escape === undefined) throw new RestoreError(`unknown restore format: ${JSON.stringify(format)}`);
     return text.replace(PLACEHOLDER, (token) => {
       if (!Object.hasOwn(map, token)) {
         if (strict) {
@@ -292,7 +363,7 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
         }
         return token;
       }
-      return map[token] as string;
+      return escape(map[token] as string);
     });
   }
 

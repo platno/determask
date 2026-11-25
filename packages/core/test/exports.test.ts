@@ -6,14 +6,20 @@ describe("public API surface", () => {
     expect(Object.keys(core).sort()).toEqual(
       [
         "ConfigError",
+        "DEFAULT_CONTEXT_BOOST",
+        "DEFAULT_THRESHOLD",
+        "DEFAULT_WINDOW",
         "KNOWN_VALUES_RECOGNIZER_ID",
         "RestoreError",
         "WithheldError",
+        "checkExamples",
         "createEngine",
         "foldText",
         "foldValue",
         "hasWordBoundaries",
         "matchKnownValues",
+        "parseMarkedExample",
+        "patternRecognizer",
       ].sort(),
     );
   });

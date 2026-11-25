@@ -12,7 +12,16 @@ import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { ConfigError, createEngine, RestoreError, WithheldError, type Recognizer, type Span } from "../src/index.js";
+import {
+  checkExamples,
+  ConfigError,
+  createEngine,
+  patternRecognizer,
+  RestoreError,
+  WithheldError,
+  type Recognizer,
+  type Span,
+} from "../src/index.js";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const config = { configVersion: 1 } as const;
@@ -87,7 +96,13 @@ describe("README — design paragraph", () => {
     });
     expect(findings.map((f) => f.entity)).toEqual(["PERSON", "PHONE_NUMBER"]);
   });
-  it.todo("R9 a separate digit/punctuation view feeds numeric identifiers, all Unicode digits folded (M1)");
+  it("R9 every Unicode decimal digit folds to ASCII, and Cyrillic folds to Latin", () => {
+    const { findings } = createEngine(config).analyze("هاتف ٠٩١٢٣٤٥٦٧٨ — Петар Петровић", {
+      knownValues: { PHONE_NUMBER: ["0912345678"], PERSON: ["Petar Petrović"] },
+    });
+    expect(findings.map((f) => f.entity)).toEqual(["PHONE_NUMBER", "PERSON"]);
+  });
+  it.todo("R9 a digit/punctuation view feeds numeric PATTERN recognizers, not only known values (M1)");
 
   it.todo("R10 built-in patterns are ReDoS-safe: static lint plus the n-vs-4n timing gate on real patterns (M1)");
   it.todo("R11 user-supplied patterns run on a linear-time engine (re2js) (M1)");
@@ -98,10 +113,14 @@ describe("README — design paragraph", () => {
     expect(engine.analyze("x", { locale: "vi-VN" }).findings).toHaveLength(1);
     expect(engine.analyze("x", { locale: "sr-RS" }).findings).toHaveLength(0);
   });
-  it.todo("R12 locale packs ship recognizers: vi-VN (M2), en-US (M4), sr-RS and en-SG (after M1)");
+  it.todo("R12 every locale pack ships recognizers whose embedded examples pass — pack-core, pack-vi, pack-sr, pack-sg one PR each; en-US M4");
 
   it("R13 restore is strict: an unknown placeholder is an error, never a guess", () => {
     expect(() => createEngine(config).restore("⟦PERSON_7⟧", {})).toThrow(RestoreError);
+  });
+  it("R13 restore escapes each value for the text it goes back into (html, json)", () => {
+    const engine = createEngine(config);
+    expect(engine.restore("<p>⟦PERSON_1⟧</p>", { "⟦PERSON_1⟧": "<b>" }, { format: "html" })).toBe("<p>&lt;b&gt;</p>");
   });
   it.todo("R13 restore detects ALTERED or MISSING placeholders after translation (post-MT validator, M3)");
 
@@ -143,25 +162,65 @@ describe("ARCHITECTURE — decisions", () => {
     expect(text.slice(findings[0]!.start, findings[0]!.end)).toBe("Hoa");
   });
 
-  it("D5/F5 Unicode boundaries, not ASCII \\b", () => {
-    const { findings } = createEngine(config).analyze("Hoàng Hoa", { knownValues: { PERSON: ["Hoa"] } });
-    expect(findings).toHaveLength(1); // "Hoà" inside "Hoàng" is not a match
+  it("D5/F5 Unicode boundaries, not ASCII \\b — and a label glued to a number does not hide it", () => {
+    const engine = createEngine(config);
+    expect(engine.analyze("Hoàng Hoa", { knownValues: { PERSON: ["Hoa"] } }).findings).toHaveLength(1); // not inside "Hoàng"
+    expect(engine.analyze("CCCD001099012345", { knownValues: { VN_PERSONAL_ID: ["001099012345"] } }).findings).toHaveLength(1);
   });
 
   it.todo("D6 dictionaries and known values match through a code-point Aho-Corasick automaton (M1)");
-  it.todo("D7 scores: base → validator → context boost → threshold; ordered rule sets clamped per step (M1)");
-  it.todo("D8 context matches whole words per language; negative words count only before the value (M2)");
-  it.todo("D9 validators are named pure functions; a throwing validator counts as a pass (M2)");
+  const code = (over: Record<string, unknown> = {}) =>
+    patternRecognizer({
+      id: "claims.code",
+      entity: "TEST_CODE",
+      locales: ["*"],
+      patterns: [{ name: "code", regex: "ab\\d{3}", score: 0.3 }],
+      context: ["code"],
+      antiContext: ["invoice"],
+      examples: { match: ["code ⟪ab123⟫"], noMatch: ["ab123"] },
+      ...over,
+    });
+  const scores = (r: Recognizer, text: string) =>
+    createEngine(config, { recognizers: [r] }).analyze(text).findings.map((f) => f.score);
+
+  it("D7 scores: pattern score → validator → context boost → threshold (default 0.5)", () => {
+    expect(scores(code(), "ab123")).toEqual([]); // 0.3 < 0.5
+    expect(scores(code(), "code ab123")[0]).toBeCloseTo(0.65); // + context
+    expect(scores(code({ validate: () => ({ score: 0.9 }) }), "ab123")).toEqual([0.9]); // regraded
+    expect(scores(code({ validate: () => false }), "code ab123")).toEqual([]); // rejected
+  });
+  it.todo("D7 ordered rule sets (hotword, exclusion, adjustment) clamped at each step, Google-style (M1)");
+
+  it("D8 context matches whole words; negative words count only before the value; windows stop at the nearest number", () => {
+    expect(scores(code(), "barcode ab123")).toEqual([]); // not a whole word
+    expect(scores(code(), "invoice code ab123")).toEqual([]); // anti-context before
+    expect(scores(code(), "code ab123 invoice")).toHaveLength(1); // anti-context after: ignored
+    expect(scores(code(), "code 42 ab123")).toEqual([]); // window stops at 42
+  });
+
+  it("D9 a validator that throws counts as a pass — the candidate is masked", () => {
+    const throwing = code({ validate: () => { throw new Error("x"); } });
+    expect(scores(throwing, "ab123")).toEqual([1]);
+  });
 
   it("D10 overlaps resolve as union with a deterministic tie-break", () => {
     const s = (entity: string, start: number, end: number, score: number): Span => ({ entity, start, end, score, recognizer: "t", trace: [] });
     const out = createEngine(config).anonymize("0912345678", [s("PHONE_NUMBER", 0, 6, 0.5), s("VN_PERSONAL_ID", 4, 10, 0.9)]);
     expect(out.text).toBe("⟦VN_PERSONAL_ID_1⟧");
   });
+  it("D10 same-type duplicates are removed in the analyzer", () => {
+    const twice: Recognizer = { id: "dup", entities: ["X"], locales: ["*"], analyze: () => [
+      { entity: "X", start: 0, end: 1, score: 0.6, recognizer: "dup", trace: [] },
+      { entity: "X", start: 0, end: 1, score: 0.8, recognizer: "dup", trace: [] },
+    ] };
+    expect(createEngine(config, { recognizers: [twice] }).analyze("x").findings.map((f) => f.score)).toEqual([0.8]);
+  });
   it.todo("D10 alternative overlap strategies: merge-contained, trim, ordered (M1)");
 
-  it("D11 knownValues are first-class per-call input (see R1, R2)", () => {
-    expect(createEngine(config).analyze("An", { knownValues: { PERSON: ["An"] } }).findings).toHaveLength(1);
+  it("D11 knownValues are first-class per-call input; numbers match whatever their grouping", () => {
+    const engine = createEngine(config);
+    expect(engine.analyze("An", { knownValues: { PERSON: ["An"] } }).findings).toHaveLength(1);
+    expect(engine.analyze("SĐT 0912.345.678", { knownValues: { PHONE_NUMBER: ["0912345678"] } }).findings).toHaveLength(1);
   });
   it.todo("D11 a value DETECTED once by a pattern is masked everywhere in the document (M2)");
 
@@ -210,7 +269,11 @@ describe("ARCHITECTURE — decisions", () => {
     expect(() => createEngine({ configVersion: 1, tresholds: {} } as never)).toThrow(ConfigError);
     expect(() => createEngine({ configVersion: 1, locales: { primary: "vi-VN", fallbak: "en" } } as never)).toThrow(ConfigError);
   });
-  it.todo("D20 a published JSON Schema states every default; every rule embeds tp/fp examples run as tests (M1)");
+  it("D20 every pattern recognizer embeds match and noMatch examples, and checkExamples runs them", () => {
+    expect(() => code({ examples: { match: [], noMatch: [] } })).toThrow(ConfigError);
+    expect(checkExamples(code())).toEqual([]);
+  });
+  it.todo("D20 a published JSON Schema states every default (M1)");
 
   it("D21 licence, notice, third-party notices, DCO and security policy are in the repository", () => {
     for (const f of ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "CONTRIBUTING.md", "SECURITY.md"]) {
