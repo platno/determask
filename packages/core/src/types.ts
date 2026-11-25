@@ -120,6 +120,13 @@ export interface AnonymizeResult {
 export interface RestoreOptions {
   /** strict (default): any placeholder-shaped token not in the map throws. */
   strict?: boolean;
+  /**
+   * What the text being restored IS, so each value is escaped for it:
+   * `"text"` (default) inserts values as they are; `"html"` escapes
+   * `& < > " '` — a translated HTML document must not gain markup from a
+   * restored name; `"json"` escapes for the inside of a JSON string.
+   */
+  format?: "text" | "html" | "json";
 }
 
 /** Engine configuration. Unknown keys, at any level, refuse to load (D20/F13). */

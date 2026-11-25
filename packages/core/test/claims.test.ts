@@ -96,7 +96,13 @@ describe("README — design paragraph", () => {
     });
     expect(findings.map((f) => f.entity)).toEqual(["PERSON", "PHONE_NUMBER"]);
   });
-  it.todo("R9 a separate digit/punctuation view feeds numeric identifiers, all Unicode digits folded (M1)");
+  it("R9 every Unicode decimal digit folds to ASCII, and Cyrillic folds to Latin", () => {
+    const { findings } = createEngine(config).analyze("هاتف ٠٩١٢٣٤٥٦٧٨ — Петар Петровић", {
+      knownValues: { PHONE_NUMBER: ["0912345678"], PERSON: ["Petar Petrović"] },
+    });
+    expect(findings.map((f) => f.entity)).toEqual(["PHONE_NUMBER", "PERSON"]);
+  });
+  it.todo("R9 a digit/punctuation view feeds numeric PATTERN recognizers, not only known values (M1)");
 
   it.todo("R10 built-in patterns are ReDoS-safe: static lint plus the n-vs-4n timing gate on real patterns (M1)");
   it.todo("R11 user-supplied patterns run on a linear-time engine (re2js) (M1)");
@@ -111,6 +117,10 @@ describe("README — design paragraph", () => {
 
   it("R13 restore is strict: an unknown placeholder is an error, never a guess", () => {
     expect(() => createEngine(config).restore("⟦PERSON_7⟧", {})).toThrow(RestoreError);
+  });
+  it("R13 restore escapes each value for the text it goes back into (html, json)", () => {
+    const engine = createEngine(config);
+    expect(engine.restore("<p>⟦PERSON_1⟧</p>", { "⟦PERSON_1⟧": "<b>" }, { format: "html" })).toBe("<p>&lt;b&gt;</p>");
   });
   it.todo("R13 restore detects ALTERED or MISSING placeholders after translation (post-MT validator, M3)");
 
@@ -152,9 +162,10 @@ describe("ARCHITECTURE — decisions", () => {
     expect(text.slice(findings[0]!.start, findings[0]!.end)).toBe("Hoa");
   });
 
-  it("D5/F5 Unicode boundaries, not ASCII \\b", () => {
-    const { findings } = createEngine(config).analyze("Hoàng Hoa", { knownValues: { PERSON: ["Hoa"] } });
-    expect(findings).toHaveLength(1); // "Hoà" inside "Hoàng" is not a match
+  it("D5/F5 Unicode boundaries, not ASCII \\b — and a label glued to a number does not hide it", () => {
+    const engine = createEngine(config);
+    expect(engine.analyze("Hoàng Hoa", { knownValues: { PERSON: ["Hoa"] } }).findings).toHaveLength(1); // not inside "Hoàng"
+    expect(engine.analyze("CCCD001099012345", { knownValues: { VN_PERSONAL_ID: ["001099012345"] } }).findings).toHaveLength(1);
   });
 
   it.todo("D6 dictionaries and known values match through a code-point Aho-Corasick automaton (M1)");
@@ -206,8 +217,10 @@ describe("ARCHITECTURE — decisions", () => {
   });
   it.todo("D10 alternative overlap strategies: merge-contained, trim, ordered (M1)");
 
-  it("D11 knownValues are first-class per-call input (see R1, R2)", () => {
-    expect(createEngine(config).analyze("An", { knownValues: { PERSON: ["An"] } }).findings).toHaveLength(1);
+  it("D11 knownValues are first-class per-call input; numbers match whatever their grouping", () => {
+    const engine = createEngine(config);
+    expect(engine.analyze("An", { knownValues: { PERSON: ["An"] } }).findings).toHaveLength(1);
+    expect(engine.analyze("SĐT 0912.345.678", { knownValues: { PHONE_NUMBER: ["0912345678"] } }).findings).toHaveLength(1);
   });
   it.todo("D11 a value DETECTED once by a pattern is masked everywhere in the document (M2)");
 
