@@ -47,6 +47,12 @@ describe("end to end: a synthetic clinic record", () => {
     expect(wrong).toMatchObject({ score: 0.6, attrs: { checksum: "unverified" } });
   });
 
+  it("finds a phone or postal code typed straight against its label", () => {
+    expect(found("HP91234567")).toEqual(["PHONE_NUMBER:91234567"]);
+    expect(found("Singapore521123")).toEqual(["SG_POSTAL_CODE:521123"]);
+    expect(found("Tel:+6591234567")).toEqual(["PHONE_NUMBER:+6591234567"]);
+  });
+
   it("marks phones with their country", () => {
     expect(engine.analyze("+65 9123 4567").findings[0]!.attrs).toEqual({ country: "SG" });
   });
