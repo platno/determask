@@ -56,6 +56,18 @@ describe("end to end: a log line", () => {
   });
 });
 
+describe("identifiers glued to labels, and in other scripts' digits", () => {
+  it("finds a card or an IP written straight after its label", () => {
+    expect(found("card4111111111111111")).toEqual(["CREDIT_CARD:4111111111111111"]);
+    expect(found("IP203.0.113.42")).toEqual(["IP_ADDRESS:203.0.113.42"]);
+  });
+
+  it("finds a card written in Arabic-Indic or Devanagari digits", () => {
+    expect(found("بطاقة ٤١١١١١١١١١١١١١١١")).toEqual(["CREDIT_CARD:٤١١١١١١١١١١١١١١١"]);
+    expect(found("कार्ड ४१११ ११११ ११११ ११११")).toEqual(["CREDIT_CARD:४१११ ११११ ११११ ११११"]);
+  });
+});
+
 describe("IBAN — candidate ends at group boundaries", () => {
   it("does not swallow a following word that looks like a group", () => {
     expect(found("pay BE68 5390 0754 7034 from Monday")).toEqual(["IBAN_CODE:BE68 5390 0754 7034"]);
@@ -80,6 +92,29 @@ describe("IBAN — candidate ends at group boundaries", () => {
 
   it("ends at the end of the text, including after a trailing space", () => {
     expect(found("RS35260005601001611379 ")).toEqual(["IBAN_CODE:RS35260005601001611379"]);
+  });
+
+  it("does not merge into the next words when a longer candidate passes the checksum by chance", () => {
+    // "DE89370400440532013000ANDRS" passes MOD 97-10 by chance; taking it leaked the second IBAN
+    expect(found("DE89370400440532013000 and RS35260005601001611379")).toEqual([
+      "IBAN_CODE:DE89370400440532013000",
+      "IBAN_CODE:RS35260005601001611379",
+    ]);
+  });
+
+  it("prefers the standard print form over a longer candidate that also passes", () => {
+    // "DE89370400440532013000AEY" passes MOD 97-10 too (a constructed token; no common
+    // word does) — the standard form, one contiguous run, must win
+    expect(found("DE89370400440532013000 aey")).toEqual(["IBAN_CODE:DE89370400440532013000"]);
+  });
+
+  it("still finds an IBAN printed in a non-standard grouping", () => {
+    expect(found("IBAN DE89 37040044 0532 013000 thanks")).toEqual(["IBAN_CODE:DE89 37040044 0532 013000"]);
+  });
+
+  it("does not start inside a word", () => {
+    expect(found("ibanDE89370400440532013000")).toEqual([]);
+    expect(found("9DE89370400440532013000")).toEqual(["IBAN_CODE:DE89370400440532013000"]);
   });
 
   it("exposes its start pattern for the ReDoS gate", () => {

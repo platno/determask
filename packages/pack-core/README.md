@@ -51,9 +51,17 @@ A validated card carries `attrs.brand` (`visa`, `mastercard`, `amex`,
 - **Version numbers are not IPs.** `version 1.2.3.4`, `v 10.0.0.1`,
   `build 4.0.21.7` and five-part strings are refused; so are clock times
   (`12:30:45`) and `::` on its own.
-- **An IBAN is never swallowed into the next word.** In
-  `BE68 5390 0754 7034 from Monday`, every group boundary is a candidate end
-  and the longest one that passes MOD 97-10 wins.
+- **An IBAN is never swallowed into the next word.** The text after an IBAN
+  start is read as groups, and an IBAN ends where a group ends — never in the
+  middle of a run. In `BE68 5390 0754 7034 from Monday` the IBAN ends before
+  `from`. The standard print form (one contiguous run, or groups of four) is
+  tried before any other grouping, because a longer candidate can pass
+  MOD 97-10 by chance (about 1 in 97) — before this rule,
+  `DE89370400440532013000 and RS35…` was masked as one span that took
+  `and RS` and leaked the second IBAN's digits.
+- **Labels glued to numbers, and other scripts' digits.** `card4111111111111111`,
+  `IP203.0.113.42` and a card written in Arabic-Indic or Devanagari digits are
+  all found (the core fold and boundary rules).
 - **A card number without Luhn is masked only with context** — except that a
   UnionPay number (62…) is accepted with context even when Luhn fails, as
   some are issued that way. Without context, a Luhn-valid number from an

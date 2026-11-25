@@ -3,7 +3,7 @@
  * IBAN. Patterns are written against the FOLDED view (lower case, ASCII
  * digits); see docs/RECOGNIZERS.md for the scoring model.
  */
-import { hasWordBoundaries, patternRecognizer, type Recognizer, type Span, type TextViews } from "@determask/core";
+import { patternRecognizer, type Recognizer, type Span, type TextViews } from "@determask/core";
 import { ASSET_EXTENSIONS, cardBrand, ibanChecksum, isIPv4, isIPv6, luhn } from "./validators.js";
 
 const ANY = ["*"];
@@ -149,15 +149,23 @@ export const creditCard = patternRecognizer({
 });
 
 const ALNUM = /[a-z0-9]/u;
+const GLUING_LETTER = /[\p{L}\p{M}_]/u;
 const IBAN_START = /[a-z]{2}\d{2}/gu;
 
 /**
  * IBAN_CODE — ISO 13616-1. A custom recognizer rather than one regex,
- * because a space-grouped IBAN can be followed by a word that looks like
- * one more group ("BE68 5390 0754 7034 from"): a regex would swallow it,
- * fail the checksum, and leak the IBAN. Instead every group boundary is a
- * candidate end, tried longest first, and the first that passes MOD 97-10
- * is the IBAN.
+ * because a space-grouped IBAN is followed by words that look like more
+ * groups ("BE68 5390 0754 7034 from"): a regex would swallow them, fail
+ * the checksum, and leak the IBAN. So the text after a start is read as
+ * groups (alphanumeric runs separated by single spaces), and candidates are
+ * whole groups only — an IBAN ends where a run ends, never inside one.
+ *
+ * Candidates in the standard print form (one contiguous run, or groups of
+ * four with a shorter last group) are tried first, longest first; only if
+ * none passes MOD 97-10 are other groupings tried. Without that order, a
+ * longer candidate that passes the checksum by chance (about 1 in 97)
+ * would swallow the next words — in "…3000 and RS35…" it took "and RS"
+ * and leaked the second IBAN.
  */
 export const iban: Recognizer = {
   id: "core.iban",
@@ -170,6 +178,7 @@ export const iban: Recognizer = {
       "⟪GB29NWBK60161331926819⟫",
       "pay ⟪BE68 5390 0754 7034⟫ from Monday",
       "račun ⟪RS35 2600 0560 1001 6113 79⟫",
+      "⟪DE89370400440532013000⟫ and ⟪RS35260005601001611379⟫",
     ],
     noMatch: ["DE89 3704 0044 0532 0130 01", "AB12 3456 7890 1234", "xDE89370400440532013000"],
   },
@@ -179,22 +188,38 @@ export const iban: Recognizer = {
     IBAN_START.lastIndex = 0;
     for (let m = IBAN_START.exec(f); m !== null; m = IBAN_START.exec(f)) {
       const s = m.index;
-      let compact = m[0];
-      let i = s + 4;
-      const ends_: { end: number; compact: string }[] = [];
-      while (i < f.length && compact.length < 34) {
+      if (s > 0 && GLUING_LETTER.test(f[s - 1] as string)) continue; // inside a word
+
+      // Read groups: alphanumeric runs separated by single spaces, ≤ 34 characters in all.
+      const groups: { text: string; end: number }[] = [];
+      let group = "";
+      let total = 0;
+      let i = s;
+      while (i < f.length && total < 34) {
         const c = f[i] as string;
         if (ALNUM.test(c)) {
-          compact += c;
+          group += c;
+          total++;
           i++;
-          if (compact.length >= 15) ends_.push({ end: i, compact });
         } else if (c === " " && i + 1 < f.length && ALNUM.test(f[i + 1] as string)) {
+          groups.push({ text: group, end: i });
+          group = "";
           i++;
         } else {
           break;
         }
       }
-      const hit = ends_.reverse().find((e) => hasWordBoundaries(f, s, e.end) && ibanChecksum(e.compact));
+      groups.push({ text: group, end: i });
+
+      const candidates = groups.map((g, k) => ({
+        compact: groups.slice(0, k + 1).map((x) => x.text).join(""),
+        end: g.end,
+        standard: k === 0 || groups.slice(0, k).every((x) => x.text.length === 4),
+        endsRun: g.end === f.length || !ALNUM.test(f[g.end] as string),
+      }));
+      const pass = (c: (typeof candidates)[number]) => c.endsRun && ibanChecksum(c.compact);
+      const longestFirst = candidates.reverse();
+      const hit = longestFirst.find((c) => c.standard && pass(c)) ?? longestFirst.find(pass);
       if (hit === undefined) continue;
       spans.push({
         entity: "IBAN_CODE",
