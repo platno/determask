@@ -56,6 +56,22 @@ export interface AnalyzeContext {
   documentId?: string;
 }
 
+/** A regex a recognizer runs, exposed so the ReDoS gate can lint it (D5). */
+export interface PatternInfo {
+  name: string;
+  regex: string;
+}
+
+/**
+ * Examples a recognizer carries and runs as tests (D20). In `match`, the
+ * span that must be found is marked ⟪like this⟫; `noMatch` texts must
+ * produce no span of the recognizer's entities.
+ */
+export interface RecognizerExamples {
+  match: readonly string[];
+  noMatch: readonly string[];
+}
+
 /** The open recognizer interface (D2): packs plug in without touching core. */
 export interface Recognizer {
   id: string;
@@ -63,6 +79,10 @@ export interface Recognizer {
   /** Locale tags this recognizer serves; "*" means locale-independent. */
   locales: string[];
   analyze(views: TextViews, ctx: AnalyzeContext): Span[];
+  /** The regexes it runs, for the ReDoS gate. */
+  patterns?: readonly PatternInfo[];
+  /** Its embedded true- and false-positive examples. */
+  examples?: RecognizerExamples;
 }
 
 /** A locale pack: recognizers plus pack metadata (D15). */
@@ -102,11 +122,16 @@ export interface RestoreOptions {
   strict?: boolean;
 }
 
-/** Engine configuration. The schema rejects unknown keys (D20/F13). */
+/** Engine configuration. Unknown keys, at any level, refuse to load (D20/F13). */
 export interface EngineConfig {
   configVersion: 1;
   name?: string;
   locales?: { primary: string; also?: string[] };
+  /**
+   * The minimum score a finding needs to be returned (D7). Default 0.5.
+   * Known values score 1 and always pass.
+   */
+  thresholds?: { default?: number; perEntity?: Record<string, number> };
   /** What to do when masking cannot be completed safely (D14). */
   onError?: "withhold";
 }

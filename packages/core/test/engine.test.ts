@@ -64,6 +64,76 @@ describe("config validation — fail closed at load (F13/F14, D20)", () => {
   });
 });
 
+describe("thresholds (D7)", () => {
+  const scored = (entity: string, score: number) => ({
+    id: `t.${entity}.${score}`,
+    entities: [entity],
+    locales: ["*"],
+    analyze: () => [{ entity, start: 0, end: 1, score, recognizer: `t.${entity}`, trace: [] }],
+  });
+  const entities = (config: EngineConfig, ...rs: ReturnType<typeof scored>[]) =>
+    createEngine(config, { recognizers: rs }).analyze("x").findings.map((f) => `${f.entity}:${f.score}`);
+
+  it("drops findings below the default threshold of 0.5, and keeps those at it", () => {
+    expect(entities(config, scored("A", 0.49), scored("B", 0.5), scored("C", 0.9))).toEqual(["B:0.5", "C:0.9"]);
+  });
+
+  it("uses a configured default", () => {
+    expect(entities({ configVersion: 1, thresholds: { default: 0.8 } }, scored("A", 0.6), scored("B", 0.9))).toEqual(["B:0.9"]);
+  });
+
+  it("uses a per-entity threshold over the default", () => {
+    const c: EngineConfig = { configVersion: 1, thresholds: { default: 0.8, perEntity: { A: 0.2 } } };
+    expect(entities(c, scored("A", 0.3), scored("B", 0.3))).toEqual(["A:0.3"]);
+  });
+
+  it("always keeps known values (score 1)", () => {
+    const engine = createEngine({ configVersion: 1, thresholds: { default: 1 } });
+    expect(engine.analyze("Hoa", { knownValues: { PERSON: ["Hoa"] } }).findings).toHaveLength(1);
+  });
+
+  const bad: [string, unknown][] = [
+    ["thresholds that are not an object", 0.5],
+    ["an unknown key inside thresholds", { min: 0.5 }],
+    ["a default above 1", { default: 1.2 }],
+    ["a non-numeric default", { default: "0.5" }],
+    ["perEntity that is not an object", { perEntity: [] }],
+    ["a perEntity id that is not SCREAMING_SNAKE", { perEntity: { phone: 0.5 } }],
+    ["a perEntity value out of range", { perEntity: { PHONE_NUMBER: -1 } }],
+  ];
+  for (const [what, thresholds] of bad) {
+    it(`refuses ${what}`, () => {
+      expect(() => createEngine({ configVersion: 1, thresholds } as never)).toThrow(ConfigError);
+    });
+  }
+});
+
+describe("same-type duplicates are removed in the analyzer (D10)", () => {
+  const at = (id: string, entity: string, score: number) => ({
+    id,
+    entities: [entity],
+    locales: ["*"],
+    analyze: () => [{ entity, start: 0, end: 3, score, recognizer: id, trace: [] }],
+  });
+
+  it("keeps only the highest-scoring span of one entity over one range", () => {
+    const engine = createEngine(config, { recognizers: [at("a", "X", 0.6), at("b", "X", 0.9), at("c", "X", 0.7)] });
+    const { findings } = engine.analyze("abc");
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ recognizer: "b", score: 0.9 });
+  });
+
+  it("keeps the first on a tie", () => {
+    const engine = createEngine(config, { recognizers: [at("a", "X", 0.6), at("b", "X", 0.6)] });
+    expect(engine.analyze("abc").findings[0]!.recognizer).toBe("a");
+  });
+
+  it("keeps spans of DIFFERENT entities over the same range — the anonymizer resolves those", () => {
+    const engine = createEngine(config, { recognizers: [at("a", "X", 0.6), at("b", "Y", 0.6)] });
+    expect(engine.analyze("abc").findings).toHaveLength(2);
+  });
+});
+
 describe("analyze", () => {
   it("returns no findings without knownValues or recognizers", () => {
     expect(createEngine(config).analyze("Nguyễn Văn An, 0912345678").findings).toEqual([]);

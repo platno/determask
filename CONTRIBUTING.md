@@ -59,6 +59,13 @@ Node ≥ 22, pnpm ≥ 10. The repo is ESM TypeScript throughout. To prove the
 cross-runtime promise locally, also run `bun scripts/smoke.mjs` and
 `deno run --allow-read scripts/smoke.mjs` after `pnpm build`.
 
+## Recognizers
+
+New identifiers are written with `patternRecognizer`; the scoring model and
+its rules are in [docs/RECOGNIZERS.md](docs/RECOGNIZERS.md). Every
+recognizer carries match and no-match examples, and its pack's tests run
+them with `checkExamples`.
+
 ## Tests
 
 The rules are in [docs/TESTING.md](docs/TESTING.md). The short version:

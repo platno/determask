@@ -121,31 +121,18 @@ built is listed as `todo` with the milestone that delivers it. Run
 Built and tested: known-values matching (case, accents, `đ→d`, whitespace,
 full-width, format characters), document-wide propagation, typed and
 numbered placeholders, union overlap resolution, strict restore, pluggable
-recognizers and locale packs with locale selection, and fail-closed
-handling of bad config, bad spans, failing recognizers and planted
-placeholders — 100% line and branch coverage, enforced in CI, plus seeded
-randomised property tests.
+recognizers and locale packs with locale selection, score thresholds, and
+fail-closed handling of bad config, bad spans, failing recognizers and
+planted placeholders — 100% line and branch coverage, enforced in CI, plus
+seeded randomised property tests.
 
-Not built yet: pattern recognizers and validators (the locale packs ship
-empty), the protect layer, the residual check, crypto operators, the MT
-adapter and the evaluation harness. See [ROADMAP.md](ROADMAP.md).
+The recognizer toolkit (`patternRecognizer`, see
+[docs/RECOGNIZERS.md](docs/RECOGNIZERS.md)) is built; what each locale pack
+detects with it is listed in that pack's README.
 
-## Packages
-
-None is published to npm yet.
-
-| Package | Contents | Status |
-|---|---|---|
-| `@determask/core` | Types, normalizer, engine, overlap handling, plain operators | working slice, 100% tested |
-| `@determask/pack-core` | Locale-independent recognizers: email, URL, IP, card, IBAN | skeleton — loads, no recognizers yet |
-| `@determask/pack-vi` | Vietnamese pack: CCCD, MST, BHYT, phones, names, addresses | skeleton — loads, no recognizers yet (M2) |
-| `@determask/pack-sr` | Serbian pack: JMBG, LBO, PIB, phones, names (both scripts) | skeleton — loads, no recognizers yet |
-| `@determask/pack-sg` | Singapore pack: NRIC/FIN, postal codes, phones, plates | skeleton — loads, no recognizers yet |
-| `@determask/pack-en-us` | US pack: SSN, ITIN, MBI, NPI, DEA, NANP, ZIP | planned (M4) |
-| `@determask/domain-*` | Domain packs: clinical, logs, support | planned (M2, M8) |
-| `@determask/crypto` | Keyed operators on @noble: HMAC, AES-SIV, FF1, date shift | planned (M6) |
-| `@determask/mt` | Placeholder round-trip through MT and LLMs | planned (M3) |
-| `@determask/eval` | Evaluators (char/token/span recall, F2), synthetic generators | planned (M5) |
+Not built yet: names and addresses, the protect layer, the residual check,
+crypto operators, the MT adapter and the evaluation harness. See
+[ROADMAP.md](ROADMAP.md).
 
 ## What this library does not claim
 
