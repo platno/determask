@@ -15,39 +15,45 @@ jobs:
       matrix:
         node: [22, 24]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm typecheck            # packages and test files
+      - run: pnpm test                 # fails below 100% line/branch/function coverage
+      - run: pnpm smoke                # the built package, README example, on Node
       - run: pnpm lint:redos
 
-  bun:
-    # D1: identical behaviour across runtimes. Bun runs the same test suite.
+  runtimes:
+    # D1: the same built package gives byte-identical results on Bun and Deno.
+    # The smoke script runs ON the runtime itself — `bun x vitest` would run Node.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
       - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: bun x vitest run
+      - run: bun scripts/smoke.mjs
+      - run: deno run --allow-read scripts/smoke.mjs
 
   licenses:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm

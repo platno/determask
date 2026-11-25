@@ -1,0 +1,30 @@
+import { createEngine } from "@determask/core";
+import { describe, expect, it } from "vitest";
+import { srPack } from "../src/index.js";
+
+describe("@determask/pack-sr — pack contract", () => {
+  it("is identified by its package name", () => {
+    expect(srPack.id).toBe("pack-sr");
+  });
+
+  it("declares exactly the locales it serves", () => {
+    expect(srPack.locales).toEqual(["sr-RS", "sr-Latn-RS", "sr-Cyrl-RS"]);
+  });
+
+  it("declares only canonical BCP 47 locale tags (or * for locale-independent)", () => {
+    for (const locale of srPack.locales) {
+      if (locale === "*") continue;
+      expect(Intl.getCanonicalLocales(locale)).toEqual([locale]);
+    }
+  });
+
+  it("loads into the engine — which checks every recognizer's contract at load", () => {
+    const engine = createEngine({ configVersion: 1 }, { packs: [srPack] });
+    expect(engine.analyze("Nothing to find here, 0912345678.").findings).toEqual([]);
+  });
+
+  it("ships no recognizers yet — update this test in the PR that adds the first one", () => {
+    expect(srPack.recognizers).toHaveLength(0);
+  });
+
+});
