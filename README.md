@@ -119,8 +119,11 @@ built is listed as `todo` with the milestone that delivers it. Run
 `pnpm claims` to see both lists.
 
 Built and tested: known-values matching (case, accents, `đ→d`, whitespace,
-full-width, format characters), document-wide propagation, typed and
-numbered placeholders, union overlap resolution, strict restore, pluggable
+full-width, format characters, any script's digits, Cyrillic ↔ Latin, and
+numbers whatever their grouping — `0912345678` finds `0912 345 678`),
+document-wide propagation, typed and
+numbered placeholders, union overlap resolution, strict restore that escapes
+values for HTML or JSON output, pluggable
 recognizers and locale packs with locale selection, score thresholds, and
 fail-closed handling of bad config, bad spans, failing recognizers and
 planted placeholders — 100% line and branch coverage, enforced in CI, plus

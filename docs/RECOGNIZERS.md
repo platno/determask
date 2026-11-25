@@ -57,7 +57,15 @@ high score and is masked anywhere (F1, F2).
   case and zero-width tricks are handled for you. Offsets in the findings are
   always into the original text.
 - **Word boundaries are Unicode-aware** and checked by the engine, not by the
-  pattern — never use `\b` or `\w` (they are ASCII-only).
+  pattern — never use `\b` or `\w` (they are ASCII-only). The rule is per
+  edge: a letter edge is glued by an adjacent letter, mark or underscore; a
+  digit edge only by an adjacent digit. So a letter–digit transition is a
+  boundary, and `CCCD001099012345` or `SĐT0912345678` is found — labels
+  glued to numbers are common in hand-typed records.
+- **Every Unicode decimal digit is ASCII in the folded view** (Arabic-Indic,
+  Persian, Devanagari, Thai, …), and **Cyrillic is Latin** (Serbian standard:
+  `ђ→d`, `ћ`/`ч→c`, `ж→z`, `ш→s`, `џ→dz`, `љ→lj`, `њ→nj`). A pattern
+  written for ASCII digits and Latin letters covers every script.
 - **Context words match whole words** on the folded view, within `window`
   code units (default 40), and the window **stops at the nearest other
   number**: in "CCCD 001…, SĐT 0912…" the phone does not get the CCCD's
