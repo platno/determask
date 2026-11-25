@@ -48,6 +48,44 @@ describe("foldText — the matching view (D4)", () => {
     expect(view.ends).toEqual([1, 1, 2, 3]);
   });
 
+  it("folds every Unicode decimal digit to ASCII, whatever the script", () => {
+    expect(foldText("٠٩١٢٣٤٥٦٧٨").text).toBe("0912345678"); // Arabic-Indic
+    expect(foldText("۰۹۱۲۳۴۵۶۷۸").text).toBe("0912345678"); // Extended Arabic-Indic (Persian, Urdu)
+    expect(foldText("०९१२३४५६७८").text).toBe("0912345678"); // Devanagari
+    expect(foldText("๐๙๑๒").text).toBe("0912"); // Thai
+    expect(foldText("𞥐𞥙").text).toBe("09"); // Adlam (astral)
+    expect(foldText("𝟎𝟗").text).toBe("09"); // mathematical digits, via NFKD
+    expect(foldText("0123456789").text).toBe("0123456789"); // ASCII untouched
+  });
+
+  it("keeps the offset map across script-folded digits", () => {
+    const original = "SĐT ٠٩١٢";
+    const { text, starts } = foldText(original);
+    expect(text).toBe("sdt 0912");
+    expect(original.slice(starts[4], starts[7]! + 1)).toBe("٠٩١٢");
+  });
+
+  it("transliterates Cyrillic to Latin on the Serbian standard, agreeing with the Latin fold", () => {
+    expect(foldText("Петар Петровић").text).toBe(foldText("Petar Petrović").text);
+    expect(foldText("Ђорђе Шћекић").text).toBe(foldText("Đorđe Šćekić").text);
+    expect(foldText("Љубица Њего Џамић Жижић Чолић").text).toBe(foldText("Ljubica Njego Džamić Žižić Čolić").text);
+    expect(foldText("ЈМБГ").text).toBe("jmbg");
+    expect(foldText("матични број").text).toBe(foldText("matični broj").text);
+  });
+
+  it("gives other Cyrillic alphabets a plain matching form", () => {
+    expect(foldText("Щука Юлия Ярослав объём").text).toBe("scuka julija jaroslav obem");
+    expect(foldText("Єва Іван Ґанок Їжак Ѕвезда").text).toBe("jeva ivan ganok izak dzvezda");
+    expect(foldText("Ѳ").text).toBe("ѳ"); // a letter with no entry is kept as it is
+  });
+
+  it("maps every unit of a multi-letter transliteration back to its source letter", () => {
+    const view = foldText("Љ");
+    expect(view.text).toBe("lj");
+    expect(view.starts).toEqual([0, 0]);
+    expect(view.ends).toEqual([1, 1]);
+  });
+
   it("handles case mappings that change length (İ → i)", () => {
     expect(foldText("İstanbul").text).toBe("istanbul");
   });
@@ -84,7 +122,8 @@ describe("foldText — the matching view (D4)", () => {
       "​​​",
       "é́́",
       "𠀀𠀁 Hoa",
-      "Ђорђе Шћекић", // Cyrillic stays Cyrillic in this view
+      "Ђорђе Шћекић Љубица ъ", // transliterated, one source letter to 0–2 units
+      "٠٩١٢ 𞥐𞥙 𝟎",
       "\uD800 lone high, lone low \uDC00",
     ]) {
       expectOffsetsRoundTrip(s);
@@ -112,12 +151,31 @@ describe("hasWordBoundaries — Unicode-aware (D5/F5)", () => {
     expect(hasWordBoundaries("bà hoa, 67", 3, 6)).toBe(true);
   });
 
-  it("rejects a letter, digit, mark or underscore on either side", () => {
+  it("a letter edge is glued by an adjacent letter, mark or underscore", () => {
     expect(hasWordBoundaries("mahoa", 2, 5)).toBe(false);
     expect(hasWordBoundaries("hoan", 0, 3)).toBe(false);
-    expect(hasWordBoundaries("9hoa", 1, 4)).toBe(false);
     expect(hasWordBoundaries("hoa_x", 0, 3)).toBe(false);
-    expect(hasWordBoundaries("hoá", 0, 3)).toBe(false);
+    expect(hasWordBoundaries("x_hoa", 2, 5)).toBe(false);
+    expect(hasWordBoundaries("hoa\u0301", 0, 3)).toBe(false);
+  });
+
+  it("a digit edge is glued only by an adjacent digit", () => {
+    expect(hasWordBoundaries("10912345678", 1, 11)).toBe(false);
+    expect(hasWordBoundaries("09123456789", 0, 10)).toBe(false);
+    expect(hasWordBoundaries("cccd001099012345", 4, 16)).toBe(true); // glued to its label
+    expect(hasWordBoundaries("0912345678abc", 0, 10)).toBe(true);
+    expect(hasWordBoundaries("user_0912345678", 5, 15)).toBe(true);
+  });
+
+  it("a letter-digit transition is a boundary in both directions", () => {
+    expect(hasWordBoundaries("9hoa", 1, 4)).toBe(true);
+    expect(hasWordBoundaries("hoa9", 0, 3)).toBe(true);
+  });
+
+  it("an edge that is neither letter nor digit is never glued", () => {
+    expect(hasWordBoundaries("x+84", 1, 4)).toBe(true);
+    expect(hasWordBoundaries("a::1", 1, 4)).toBe(true);
+    expect(hasWordBoundaries("ab(", 0, 3)).toBe(true);
   });
 
   it("treats non-ASCII letters as letters (where ASCII \\b fails)", () => {

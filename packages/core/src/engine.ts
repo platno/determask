@@ -214,6 +214,25 @@ function isValidSpan(span: Span, length: number): boolean {
   );
 }
 
+const HTML_ESCAPES: Readonly<Record<string, string>> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+/**
+ * How a restored value is written into the text it goes back into. A value
+ * restored raw into HTML or JSON is an injection: a name like
+ * `</span><b>` would become markup (cf. flare-redact GHSA-4c5j-9f3p-p7mh).
+ */
+const ESCAPERS: Readonly<Record<string, (value: string) => string>> = {
+  text: (value) => value,
+  html: (value) => value.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c] as string),
+  json: (value) => JSON.stringify(value).slice(1, -1),
+};
+
 const isHigh = (u: number): boolean => u >= 0xd800 && u <= 0xdbff;
 const isLow = (u: number): boolean => u >= 0xdc00 && u <= 0xdfff;
 
@@ -334,6 +353,9 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
     restoreOptions: RestoreOptions = {},
   ): string {
     const strict = restoreOptions.strict ?? true;
+    const format = restoreOptions.format ?? "text";
+    const escape = ESCAPERS[format];
+    if (escape === undefined) throw new RestoreError(`unknown restore format: ${JSON.stringify(format)}`);
     return text.replace(PLACEHOLDER, (token) => {
       if (!Object.hasOwn(map, token)) {
         if (strict) {
@@ -341,7 +363,7 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
         }
         return token;
       }
-      return map[token] as string;
+      return escape(map[token] as string);
     });
   }
 
