@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# Never commit real clinical text, gold sets, or maps/keys.
+# Real evaluation data stays at the deployment (see docs/ARCHITECTURE.md).
+/gold/
+*.map.enc
+*.key

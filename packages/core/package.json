@@ -1,0 +1,27 @@
+{
+  "name": "@determask/core",
+  "version": "0.0.1",
+  "description": "Deterministic PII masking engine: types, normalizer, analyze/anonymize/restore, fail-closed operators.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": ["pii", "phi", "masking", "pseudonymization", "redaction", "deterministic", "clinical"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
