@@ -361,6 +361,29 @@ describe("restore — strict by default (D18)", () => {
     expect(engine.restore("Hello ⟦PERSON_9⟧", {}, { strict: false })).toBe("Hello ⟦PERSON_9⟧");
   });
 
+  it("escapes restored values for HTML, so a value cannot become markup", () => {
+    const map = { "⟦PERSON_1⟧": `</span><b onclick="x">Tom & 'Jerry'` };
+    expect(engine.restore('<span translate="no">⟦PERSON_1⟧</span>', map, { format: "html" })).toBe(
+      '<span translate="no">&lt;/span&gt;&lt;b onclick=&quot;x&quot;&gt;Tom &amp; &#39;Jerry&#39;</span>',
+    );
+  });
+
+  it("escapes restored values for the inside of a JSON string", () => {
+    const value = 'a "quoted" \\ back\nslash';
+    const out = engine.restore('{"name":"⟦PERSON_1⟧","n":1}', { "⟦PERSON_1⟧": value }, { format: "json" });
+    expect(JSON.parse(out)).toEqual({ name: value, n: 1 });
+  });
+
+  it("inserts values as they are for plain text, the default", () => {
+    const map = { "⟦PERSON_1⟧": "<b>&" };
+    expect(engine.restore("⟦PERSON_1⟧", map)).toBe("<b>&");
+    expect(engine.restore("⟦PERSON_1⟧", map, { format: "text" })).toBe("<b>&");
+  });
+
+  it("refuses an unknown format instead of guessing", () => {
+    expect(() => engine.restore("⟦PERSON_1⟧", { "⟦PERSON_1⟧": "x" }, { format: "xml" as never })).toThrow(RestoreError);
+  });
+
   it("leaves text without placeholders unchanged", () => {
     expect(engine.restore("no tokens here", {})).toBe("no tokens here");
   });

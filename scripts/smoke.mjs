@@ -55,6 +55,13 @@ const srOut = engine.anonymize(sr, engine.analyze(sr, {
 }).findings).text;
 check("Unicode folding and boundaries", srOut, "⟦PERSON_1⟧, 😀 ⟦PHONE_NUMBER_1⟧, 𠀀Hoa");
 
+// Script folding: other scripts' digits, Cyrillic ↔ Latin, numbers by any grouping.
+const mixed = "هاتف ٠٩١٢٣٤٥٦٧٨, Петар Петровић, SĐT0912.345.678";
+const mixedOut = engine.anonymize(mixed, engine.analyze(mixed, {
+  knownValues: { PHONE_NUMBER: ["0912345678"], PERSON: ["Petar Petrović"] },
+}).findings).text;
+check("script folding", mixedOut, "هاتف ⟦PHONE_NUMBER_1⟧, ⟦PERSON_1⟧, SĐT⟦PHONE_NUMBER_2⟧");
+
 // Fail closed.
 throws("placeholder injection withheld", () => engine.anonymize("⟦PERSON_1⟧", []), WithheldError);
 throws("unknown placeholder refused", () => engine.restore("⟦PERSON_9⟧", {}), RestoreError);
