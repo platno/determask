@@ -10,6 +10,7 @@ export type {
   AnonymizeResult,
   Engine,
   EngineConfig,
+  EngineOptions,
   FoldedView,
   KnownValues,
   Pack,

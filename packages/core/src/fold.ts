@@ -74,10 +74,32 @@ export function foldValue(value: string): string {
  * [start, end) must not be letters, marks, digits or underscore.
  */
 export function hasWordBoundaries(folded: string, start: number, end: number): boolean {
-  const wordChar = /[\p{L}\p{M}\p{N}_]/u;
-  const before = start > 0 ? folded[start - 1] : undefined;
-  const after = end < folded.length ? folded[end] : undefined;
-  if (before !== undefined && wordChar.test(before)) return false;
-  if (after !== undefined && wordChar.test(after)) return false;
+  const before = codePointBefore(folded, start);
+  const after = codePointFrom(folded, end);
+  if (before !== undefined && WORD_CHAR.test(before)) return false;
+  if (after !== undefined && WORD_CHAR.test(after)) return false;
   return true;
+}
+
+const WORD_CHAR = /^[\p{L}\p{M}\p{N}_]$/u;
+
+/**
+ * The whole code point ending at `i` — both halves of a surrogate pair, so
+ * an astral letter (CJK Extension B, Deseret, …) next to a match is a
+ * letter, not a lone surrogate that would read as a boundary.
+ */
+function codePointBefore(s: string, i: number): string | undefined {
+  if (i <= 0) return undefined;
+  const low = s.charCodeAt(i - 1);
+  if (low >= 0xdc00 && low <= 0xdfff && i >= 2) {
+    const high = s.charCodeAt(i - 2);
+    if (high >= 0xd800 && high <= 0xdbff) return s.slice(i - 2, i);
+  }
+  return s.slice(i - 1, i);
+}
+
+/** The whole code point starting at `i`. */
+function codePointFrom(s: string, i: number): string | undefined {
+  if (i >= s.length) return undefined;
+  return String.fromCodePoint(s.codePointAt(i) as number);
 }
