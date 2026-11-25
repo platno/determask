@@ -7,9 +7,18 @@ reference them (e.g. "implements D9").
 ## The problem
 
 No open-source library or cloud service deterministically masks personal
-data in Vietnamese clinical free text. The JS/TS redactors we probed share
-the same failure classes; rule-based clinical de-identifiers are
-English-only and dormant. The library is built from five proven parts:
+data in free text across languages and domains. The JS/TS redactors we
+probed share the same failure classes, and those failures are not
+domain-specific: a bare number misread as a phone corrupts a log line or an
+LLM prompt exactly as it corrupts a clinical note. The rule-based
+de-identifiers that do better are clinical-only, English-only and dormant.
+
+The research started from the hardest case — Vietnamese clinical notes
+sent to machine translation — and that remains the first consumer and the
+proving ground. The design is general: locale packs and domain packs are
+separate axes (see "Locales and domains" below).
+
+The library is built from five proven parts:
 
 - **Presidio**'s analyzer/anonymizer split and recognizer model (MIT);
 - **Google Cloud DLP**'s rule semantics and operator catalogue (concepts only);
@@ -21,14 +30,14 @@ English-only and dormant. The library is built from five proven parts:
 
 | # | Failure observed in existing tools | Rule here |
 |---|---|---|
-| F1 | Context-free generic patterns flood clinical prose | Weak/generic types need context and are opt-in |
+| F1 | Context-free generic patterns flood prose (clinical notes, logs, tickets) | Weak/generic types need context and are opt-in |
 | F2 | Bare numbers become phones or IDs | Numeric types need a validator or context; anti-context lists |
 | F3 | Placeholders get rescanned and nested | Detect once on the original text; operators never rescan their own output |
 | F4 | Wrong checksums (e.g. NPI without the 80840 prefix) | Validators from primary specs, tested against official vectors |
 | F5 | ASCII `\b`/`\w` splits Vietnamese words | Unicode-aware boundaries |
 | F6 | Partial masks leak digits | Mask the union of overlapping spans; residual digit-run check |
 | F7 | A generic match beats a specific one | Validator+context confirmed IDs outrank generic types |
-| F8 | Clinical content gets masked (ICD codes, doses) | A protected layer that never masks clinical values |
+| F8 | Domain content gets masked (ICD codes and doses in notes; UUIDs, hashes and timestamps in logs) | A protected layer, per domain, that never masks the values the domain needs |
 | F9/F10 | Regex timers that can't interrupt; skip-on-timeout | ReDoS-safe by construction; fail closed |
 | F11 | Arbitrary tie-breaks; piecewise overlap masking | Deterministic tie-break; union by default |
 | F12 | Masking only ASCII leaks non-ASCII letters | Mask by Unicode character class |
@@ -52,7 +61,7 @@ English-only and dormant. The library is built from five proven parts:
 | D9 | Validators are named pure functions. Unknown name = load error. A validator that **throws counts as a pass** (candidate masked): privacy fails closed. |
 | D10 | Same-type duplicates removed in the analyzer. Cross-type overlaps resolved in the anonymizer, default `union`. Ties: priority, then length, then start, then registry order. |
 | D11 | `knownValues` is first-class per-call input, matched with case/accents/whitespace folded; anything detected once is masked everywhere in the document. |
-| D12 | Protected layer: detectors for clinical values (vitals, labs with units, doses, ICD/ATC) that never mask and suppress overlapping weak hits. |
+| D12 | Protected layer, shipped per domain: detectors for the values a domain needs intact — clinical (vitals, labs with units, doses, ICD/ATC), logs (UUIDs, trace ids, hashes, timestamps, versions), commerce/support (order ids, amounts, SKUs) — that never mask and suppress overlapping weak hits. |
 | D13 | Optional default-deny residual mode per field: tokens absent from a deployment-supplied allow vocabulary are masked. |
 | D14 | Fail closed: recognizer error, unsupported input, or residual-check hit ⇒ withhold or fully redact, never emit unmasked. |
 | D15 | Locale packs set default phone country, date order, context words, precedence. Generic numeric types need context. |
@@ -92,12 +101,35 @@ packages/
   pack-sg      Singapore pack: NRIC/FIN checksum, building-level postal codes
                (dep: libphonenumber-js)
   pack-en-us   US pack (dep: libphonenumber-js)
+  domain-clinical  protected clinical values; clinical name/eponym exclusions
+  domain-logs      protected UUIDs, trace ids, hashes, timestamps; streaming-friendly
+  domain-support   protected order ids, amounts, SKUs; ticket/chat structure
   crypto       keyed operators on @noble/ciphers + @noble/hashes
-  mt           HTML span wrapping, escaping, post-MT validation
+  mt           placeholder round-trip through text-transforming services:
+               MT (HTML span wrapping, post-MT validation) and LLMs
+               (placeholder-safe prompts, restore across streamed chunks)
   eval         generators, evaluators, report output
   cli
   data-*       versioned gazetteers and name lists
 ```
+
+## Locales and domains
+
+Two independent axes, never coupled in core (F15):
+
+- A **locale pack** (`pack-vi`, `pack-sr`, `pack-sg`, `pack-en-us`, …) owns
+  what is true of a country or language: identifiers and their
+  validators, phone and date formats, name and address rules, context
+  words.
+- A **domain pack** (`domain-clinical`, `domain-logs`, `domain-support`,
+  …) owns what is true of a kind of text: which values must survive
+  (D12), which exclusion dictionaries apply, and which entities are worth
+  enabling by default (an MRN matters in a note, a trace id must survive in
+  a log).
+
+A **preset** is an ordinary config that `extends` one or more of each
+(`vi-VN + clinical`, `en-US + logs`). Core holds neither: it has no
+entities, no context words and no protected values of its own.
 
 ## Entity catalogue conventions
 
@@ -123,7 +155,7 @@ real gold sets at a deployment can gate go-live, and they never leave it.
 ## Legal framing
 
 Masked text with a held map is **pseudonymised** — still personal data in
-the hospital's hands under Vietnam's Law 91/2025 (and in the EDPB's
-reading of GDPR). Restore IDs are random/sequential, never derived from
+the hands of whoever holds the map (for the first consumer, the hospital)
+under Vietnam's Law 91/2025 and in the EDPB's reading of GDPR. Restore IDs are random/sequential, never derived from
 PHI (HIPAA §164.514(c)). The library says "masking and pseudonymisation";
 "de-identified" is a claim for the deployment's legal analysis, not ours.

@@ -111,6 +111,12 @@ export interface EngineConfig {
   onError?: "withhold";
 }
 
+/** What plugs into the engine (D2): locale packs and standalone recognizers. */
+export interface EngineOptions {
+  packs?: readonly Pack[];
+  recognizers?: readonly Recognizer[];
+}
+
 export interface Engine {
   analyze(text: string, options?: AnalyzeOptions): AnalyzeResult;
   anonymize(text: string, findings: readonly Span[], options?: AnonymizeOptions): AnonymizeResult;

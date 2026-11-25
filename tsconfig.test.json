@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "types": ["node"],
+    "paths": { "@determask/core": ["./packages/core/src/index.ts"] }
+  },
+  "include": ["packages/*/test/**/*.ts", "packages/*/src/**/*.ts", "vitest.config.ts"]
+}
