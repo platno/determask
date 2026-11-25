@@ -1,15 +1,16 @@
 /**
- * Locale-independent recognizers (M2): email, URL, IP, payment card
- * (Luhn), IBAN (mod-97 with length table).
- *
- * Empty on purpose: M0's exit criterion is CI green on an empty pack.
- * Recognizers land with per-rule true/false-positive samples (D20) and
- * validators cited to their primary specs (CONTRIBUTING.md).
+ * Locale-independent recognizers: email, URL, IP address, payment card,
+ * IBAN. They serve every locale ("*"). See README.md for what each detects
+ * and the primary source behind each validator.
  */
 import type { Pack } from "@determask/core";
+import { creditCard, email, iban, ipv4, ipv6, url } from "./recognizers.js";
+
+export { creditCard, email, iban, ipv4, ipv6, url } from "./recognizers.js";
+export { ASSET_EXTENSIONS, cardBrand, ibanChecksum, isIPv4, isIPv6, luhn } from "./validators.js";
 
 export const corePack: Pack = {
   id: "pack-core",
   locales: ["*"],
-  recognizers: [],
+  recognizers: [email, url, ipv4, ipv6, creditCard, iban],
 };
