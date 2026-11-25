@@ -1,9 +1,10 @@
 /**
  * Serbian recognizers. Serbian is written in Cyrillic and Latin, often both
- * in one record, so every context list carries both scripts. Patterns are
- * written against the FOLDED view (lower case, marks stripped — č, ć, š, ž
- * fold to c, c, s, z and đ to d; Cyrillic stays Cyrillic). All test values
- * are synthetic.
+ * in one record. The folded view transliterates Cyrillic to Latin on the
+ * Serbian standard, so `рачун` and `račun` fold to the same `racun`; the
+ * context lists still name both scripts, so they read as Serbian. Patterns
+ * are written against the FOLDED view (lower case, marks stripped — č, ć,
+ * š, ž fold to c, c, s, z and đ to d). All test values are synthetic.
  */
 import { patternRecognizer } from "@determask/core";
 import { isJmbg, isPib, isRsAccount } from "./validators.js";

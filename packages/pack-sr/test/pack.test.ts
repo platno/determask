@@ -50,6 +50,20 @@ describe("end to end: a synthetic record in both scripts", () => {
     expect(engine.restore(text, map)).toBe(record);
   });
 
+  it("masks both spellings of a name passed once, in either script", () => {
+    const text = "Pacijent Petar Petrović; Пацијент Петар Петровић";
+    for (const name of ["Petar Petrović", "Петар Петровић", "petar petrovic"]) {
+      const { findings } = engine.analyze(text, { knownValues: { PERSON: [name] } });
+      expect(engine.anonymize(text, findings).text, name).toBe("Pacijent ⟦PERSON_1⟧; Пацијент ⟦PERSON_2⟧");
+    }
+  });
+
+  it("finds a JMBG or a phone typed straight against its label", () => {
+    expect(found("JMBG0101990710008")).toEqual(["RS_PERSONAL_ID:0101990710008"]);
+    expect(found("ЈМБГ0101990710008")).toEqual(["RS_PERSONAL_ID:0101990710008"]);
+    expect(found("mob.0641234567")).toEqual(["PHONE_NUMBER:0641234567"]);
+  });
+
   it("matches context words across the diacritic fold (č, ć, š, ž, đ)", () => {
     expect(found("tekući račun 260005601001611379")).toEqual(["RS_BANK_ACCOUNT:260005601001611379"]);
     expect(found("tekuci racun 260005601001611379")).toEqual(["RS_BANK_ACCOUNT:260005601001611379"]);

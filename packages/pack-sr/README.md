@@ -40,9 +40,11 @@ Phones carry `attrs.country = "RS"`.
 
 ## Behaviour worth knowing
 
-- **Both scripts, one pack.** Every context list holds Latin and Cyrillic
-  forms (`JMBG` / `ЈМБГ`, `račun` / `рачун`), and Latin diacritics fold, so
-  `tekuci racun` matches like `tekući račun`.
+- **Both scripts, one pack — and one known value covers both.** The core
+  fold transliterates Cyrillic to Latin on the Serbian standard, so
+  `Petar Petrović` passed once as a known value also masks `Петар Петровић`,
+  and `рачун`, `račun` and `racun` are the same context word. Latin
+  diacritics fold too: `tekuci racun` matches like `tekući račun`.
 - **A JMBG is a real date.** 32 January, 31 April and 29 February 1999 are
   refused even with a correct check digit. The date is not compared with
   today, so the same text masks the same way every year (D1).
@@ -58,9 +60,6 @@ Phones carry `attrs.country = "RS"`.
 
 - **Names and addresses**: Serbian name rules (-ić / -ović / -ević surnames,
   honorifics) and address chains — use `knownValues` until then.
-- **Cyrillic ↔ Latin transliteration in known values.** `Петар Петровић` and
-  `Petar Petrović` are different spellings to the matcher, so pass both (as
-  the tests do). A transliterating fold is a follow-up.
 - Identity card and passport numbers, licence plates, the company
   registration number (matični broj, 8 digits), dates of birth in prose.
 - **libphonenumber-js**: as in pack-vi, this first version uses the numbering
