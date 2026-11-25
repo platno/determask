@@ -70,6 +70,20 @@ describe("end to end: a synthetic clinical note", () => {
     expect(found("tài khoản Zalo 0912345678")).toEqual(["PHONE_NUMBER:0912345678"]);
   });
 
+  it("finds identifiers typed straight against their label, as hand-entered records do", () => {
+    expect(found("CCCD001099012345")).toEqual(["VN_PERSONAL_ID:001099012345"]);
+    expect(found("SĐT0912345678")).toEqual(["PHONE_NUMBER:0912345678"]);
+    expect(found("MST0791234569")).toEqual(["VN_TAX_CODE:0791234569"]); // and still not a phone
+    expect(found("BHYT:DN4010123456789")).toEqual(["VN_HEALTH_INSURANCE_CARD:DN4010123456789"]);
+  });
+
+  it("finds the record's phone in the note whatever its grouping", () => {
+    const note = "Người nhà gọi 0912.345.678 lúc 8h; SĐT trong hồ sơ: 0912 345 678";
+    const { findings } = engine.analyze(note, { knownValues: { PHONE_NUMBER: ["0912345678"] } });
+    const { text } = engine.anonymize(note, findings);
+    expect(text).toBe("Người nhà gọi ⟦PHONE_NUMBER_1⟧ lúc 8h; SĐT trong hồ sơ: ⟦PHONE_NUMBER_2⟧");
+  });
+
   it("marks phones with their country", () => {
     expect(engine.analyze("SĐT 0912345678").findings[0]!.attrs).toEqual({ country: "VN" });
   });

@@ -59,6 +59,11 @@ Phones carry `attrs.country = "VN"`.
   the candidate, so a common word there would be a leak. "lô" alone (it folds
   to "lo", also "worry") and "tài khoản" alone ("tài khoản Zalo 0912…" is a
   phone) are deliberately not on the lists.
+- **Labels typed against the number are fine.** `CCCD001099012345`,
+  `SĐT0912345678` and `MST0791234569` are found as if they were spaced —
+  hand-entered records often drop the space. A phone from the record, passed
+  as a known value, is found in the note whatever its grouping
+  (`0912.345.678`, `0912 345 678`).
 - **Context does not cross another number.** In "CMND 012345678, 7912345678",
   the CMND context belongs to the 9-digit card only.
 - **Dates are not checked against today.** A CCCD's birth year is not
