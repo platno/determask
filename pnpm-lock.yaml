@@ -23,6 +23,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/pack-sg:
+    dependencies:
+      '@determask/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/pack-sr:
     dependencies:
       '@determask/core':

@@ -89,6 +89,8 @@ packages/
   pack-core    email, URL, IP, card, IBAN
   pack-vi      Vietnamese pack (dep: libphonenumber-js)
   pack-sr      Serbian pack: Cyrillic/Latin dual script (dep: libphonenumber-js)
+  pack-sg      Singapore pack: NRIC/FIN checksum, building-level postal codes
+               (dep: libphonenumber-js)
   pack-en-us   US pack (dep: libphonenumber-js)
   crypto       keyed operators on @noble/ciphers + @noble/hashes
   mt           HTML span wrapping, escaping, post-MT validation

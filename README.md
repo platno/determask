@@ -78,6 +78,7 @@ const restored = engine.restore(translated, map, { strict: true });
 | `@determask/pack-core` | Locale-independent recognizers: email, URL, IP, card, IBAN |
 | `@determask/pack-vi` | Vietnamese pack: CCCD, MST, BHYT, phones, names, addresses |
 | `@determask/pack-sr` | Serbian pack: JMBG, LBO, PIB, phones, names (both scripts) |
+| `@determask/pack-sg` | Singapore pack: NRIC/FIN, postal codes, phones, plates |
 | `@determask/pack-en-us` | US pack: SSN, ITIN, MBI, NPI, DEA, NANP, ZIP |
 | `@determask/crypto` | Keyed operators on @noble: HMAC, AES-SIV, FF1, date shift |
 | `@determask/mt` | Machine-translation lane: span wrapping, post-MT validation |

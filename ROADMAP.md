@@ -17,9 +17,10 @@ Evaluation is a product, not an afterthought.
 | **M8 Default-deny & protected layer → v0.6** | Per-field allow-vocabulary mode; protected clinical dictionaries from openly licensed sources; eponym/drug exclusion lists | Recall gain measured on a gold set |
 | **v1.0** | API freeze; pack contract documented; gates met on one real Vietnamese and one real US deployment gold set; security review of vault and operators | Binary-PHI recall ≥ 0.95 per real gold set with category floors; zero canary leaks; no ReDoS failures |
 
-**Additional locale packs** (e.g. `@determask/pack-sr`, Serbian: JMBG, LBO,
-PIB, dual Cyrillic/Latin script) follow the pack contract and can land any
-time after M1, independently of the milestone train above.
+**Additional locale packs** (e.g. `@determask/pack-sr` — Serbian: JMBG, LBO,
+PIB, dual Cyrillic/Latin script; `@determask/pack-sg` — Singapore: NRIC/FIN,
+building-level postal codes) follow the pack contract and can land any time
+after M1, independently of the milestone train above.
 
 Open technical items per milestone (CCCD century table, BHYT object codes,
 MST weights vs the tax authority spec, VN passport digit count, re2js astral
