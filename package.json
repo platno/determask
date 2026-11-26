@@ -14,7 +14,8 @@
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.test.json",
     "test": "vitest run --coverage",
     "lint:redos": "node scripts/redos-lint.mjs",
-    "check": "pnpm build && pnpm typecheck && pnpm test && pnpm smoke && pnpm lint:redos",
+    "lint:scale": "node scripts/scale-lint.mjs",
+    "check": "pnpm build && pnpm typecheck && pnpm test && pnpm smoke && pnpm lint:redos && pnpm lint:scale",
     "test:watch": "vitest",
     "claims": "vitest run packages/core/test/claims.test.ts --reporter=verbose",
     "smoke": "node scripts/smoke.mjs"
