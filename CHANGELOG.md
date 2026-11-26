@@ -49,7 +49,10 @@ The first published version. Every package is new.
   inside one (#14).
 - Folding maps letters people type without their diacritic: ß→ss,
   Turkish ı→i, ø, ł, þ, æ, œ, Greek final ς, Arabic ة and ى, and drops
-  the tatweel (#15).
+  the tatweel; every dash folds to "-", so "0912–345–678" is grouped like
+  "0912-345-678" (#15).
+- An anti-context word rejects a value only when it is the nearest label:
+  "Invoice sent to the patient, HP 9123 4567" masks the phone (#17).
 
 ### Locale packs
 
