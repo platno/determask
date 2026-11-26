@@ -16,13 +16,13 @@ import {
   checkExamples,
   ConfigError,
   createEngine,
-  createStreamRestorer,
   patternRecognizer,
   RestoreError,
   WithheldError,
   type Recognizer,
   type Span,
 } from "../src/index.js";
+import { createStreamRestorer } from "../src/index.js";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const config = { configVersion: 1 } as const;
@@ -320,20 +320,6 @@ describe("ARCHITECTURE — failures the design must not repeat", () => {
   it.todo("F16 names need context, known values or adjacent evidence — capitalisation alone never counts (M2)");
 });
 
-describe("README — the API sketch runs exactly as documented", () => {
-  it("masks, then restores, the README example byte for byte", () => {
-    const engine = createEngine({ configVersion: 1 });
-    const text = "Bệnh nhân Nguyễn Văn An, SĐT 0912 345 678. Tái khám: nguyen van an.";
-    const { findings } = engine.analyze(text, {
-      locale: "vi-VN",
-      knownValues: { PERSON: ["Nguyễn Văn An"], PHONE_NUMBER: ["0912 345 678"] },
-    });
-    const { text: masked, map } = engine.anonymize(text, findings);
-    expect(masked).toBe("Bệnh nhân ⟦PERSON_1⟧, SĐT ⟦PHONE_NUMBER_1⟧. Tái khám: ⟦PERSON_2⟧.");
-    expect(engine.restore(masked, map, { strict: true })).toBe(text);
-  });
-});
-
 describe("README — streaming restore", () => {
   it("restores a stream split inside placeholders through the README's TransformStream", async () => {
     const engine = createEngine({ configVersion: 1 });
@@ -351,5 +337,19 @@ describe("README — streaming restore", () => {
     let out = "";
     for await (const piece of ReadableStream.from(chunks).pipeThrough(restoring)) out += piece;
     expect(out).toBe(text);
+  });
+});
+
+describe("README — the API sketch runs exactly as documented", () => {
+  it("masks, then restores, the README example byte for byte", () => {
+    const engine = createEngine({ configVersion: 1 });
+    const text = "Bệnh nhân Nguyễn Văn An, SĐT 0912 345 678. Tái khám: nguyen van an.";
+    const { findings } = engine.analyze(text, {
+      locale: "vi-VN",
+      knownValues: { PERSON: ["Nguyễn Văn An"], PHONE_NUMBER: ["0912 345 678"] },
+    });
+    const { text: masked, map } = engine.anonymize(text, findings);
+    expect(masked).toBe("Bệnh nhân ⟦PERSON_1⟧, SĐT ⟦PHONE_NUMBER_1⟧. Tái khám: ⟦PERSON_2⟧.");
+    expect(engine.restore(masked, map, { strict: true })).toBe(text);
   });
 });
