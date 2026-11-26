@@ -35,7 +35,7 @@ describe("end to end: a synthetic record in both scripts", () => {
   const record =
     "Pacijent: Petar Petrović, JMBG 0101990710008, LBO 12345678901, mob. 064 123 4567. " +
     "Пацијент: Петар Петровић, ЈМБГ 0101990710008, тел. 011/123-4567, рачун 160-123456-54. " +
-    "TA 120/80 mmHg, temperatura 37,2 °C, faktura 0641234567.";
+    "TA 120/80 mmHg, temperatura 37,2 °C, faktura 0647654321.";
 
   it("masks every identifier in Latin and Cyrillic, and keeps vitals and the invoice number", () => {
     const { findings } = engine.analyze(record, {
@@ -45,7 +45,7 @@ describe("end to end: a synthetic record in both scripts", () => {
     expect(text).toBe(
       "Pacijent: ⟦PERSON_1⟧, JMBG ⟦RS_PERSONAL_ID_1⟧, LBO ⟦RS_HEALTH_INSURANCE_NUMBER_1⟧, mob. ⟦PHONE_NUMBER_1⟧. " +
         "Пацијент: ⟦PERSON_2⟧, ЈМБГ ⟦RS_PERSONAL_ID_1⟧, тел. ⟦PHONE_NUMBER_2⟧, рачун ⟦RS_BANK_ACCOUNT_1⟧. " +
-        "TA 120/80 mmHg, temperatura 37,2 °C, faktura 0641234567.",
+        "TA 120/80 mmHg, temperatura 37,2 °C, faktura 0647654321.",
     );
     expect(engine.restore(text, map)).toBe(record);
   });

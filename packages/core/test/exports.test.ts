@@ -10,6 +10,7 @@ describe("public API surface", () => {
         "DEFAULT_THRESHOLD",
         "DEFAULT_WINDOW",
         "KNOWN_VALUES_RECOGNIZER_ID",
+        "PROPAGATION_RECOGNIZER_ID",
         "RestoreError",
         "WithheldError",
         "checkExamples",

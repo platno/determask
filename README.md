@@ -121,7 +121,8 @@ built is listed as `todo` with the milestone that delivers it. Run
 Built and tested: known-values matching (case, accents, `đ→d`, whitespace,
 full-width, format characters, any script's digits, Cyrillic ↔ Latin, and
 numbers whatever their grouping — `0912345678` finds `0912 345 678`),
-document-wide propagation, typed and
+document-wide propagation of known values and of any detected value a
+validator or context word vouched for, typed and
 numbered placeholders, union overlap resolution, strict restore that escapes
 values for HTML or JSON output, pluggable
 recognizers and locale packs with locale selection, score thresholds, and

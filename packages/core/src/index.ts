@@ -1,4 +1,5 @@
 export { createEngine, DEFAULT_THRESHOLD } from "./engine.js";
+export { PROPAGATION_RECOGNIZER_ID } from "./propagate.js";
 export {
   patternRecognizer,
   DEFAULT_CONTEXT_BOOST,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ConfigError,
   createEngine,
+  patternRecognizer,
   WithheldError,
   type AnalyzeContext,
   type Pack,
@@ -84,6 +85,95 @@ describe("locale selection (D15, F15)", () => {
   it("runs EVERY recognizer when no locale is known — over-mask, never drop recall", () => {
     const engine = createEngine(config, { recognizers: [vi, sr, any] });
     expect(entities(engine)).toEqual(["ANY_THING", "SR_THING", "VI_THING"]);
+  });
+});
+
+describe("document-wide propagation of detected values (D11)", () => {
+  // A 9-digit card number, found only with its "cmnd" label (no checksum).
+  const cmnd = patternRecognizer({
+    id: "t.cmnd",
+    entity: "LEGACY_ID",
+    locales: ["*"],
+    patterns: [{ name: "nine", regex: "(?<!\\d)\\d{9}(?!\\d)", score: 0.2 }],
+    context: ["cmnd"],
+    contextBoost: 0.4,
+    examples: { match: ["cmnd ⟪012345678⟫"], noMatch: ["012345678"] },
+  });
+  // A checksum-backed id written contiguously; the pattern cannot see a spaced form.
+  const checked = patternRecognizer({
+    id: "t.checked",
+    entity: "CHECKED_ID",
+    locales: ["*"],
+    patterns: [{ name: "contiguous", regex: "(?<!\\d)\\d{9}(?!\\d)", score: 0.9 }],
+    validate: (v) => v.endsWith("9"),
+    examples: { match: ["⟪123456789⟫"], noMatch: ["123456788"] },
+  });
+  const found = (rs: Recognizer[], text: string) =>
+    createEngine(config, { recognizers: rs }).analyze(text).findings.map((f) => `${f.recognizer}:${text.slice(f.start, f.end)}`);
+
+  it("masks a later mention that lacks the label that vouched for the first", () => {
+    expect(found([cmnd], "CMND 012345678 … gọi lại, số 012345678")).toEqual([
+      "t.cmnd:012345678",
+      "core.propagation:012345678",
+    ]);
+  });
+
+  it("follows a validator-backed value into another grouping", () => {
+    expect(found([checked], "id 123456789, again 123 456 789")).toEqual([
+      "t.checked:123456789",
+      "core.propagation:123 456 789",
+    ]);
+  });
+
+  it("does not propagate a finding only its bare pattern supports", () => {
+    const bare: Recognizer = {
+      id: "t.bare",
+      entities: ["BARE"],
+      locales: ["*"],
+      analyze: (v) => {
+        const at = v.original.indexOf("zz777");
+        return [{ entity: "BARE", start: at, end: at + 5, score: 0.9, recognizer: "t.bare", trace: [{ rule: "pattern:x" }] }];
+      },
+    };
+    expect(found([bare], "zz777 then ZZ777")).toEqual(["t.bare:zz777"]);
+  });
+
+  it("never propagates a value shorter than 3 characters (llm-pii-proxy #28's failure)", () => {
+    const unit: Recognizer = {
+      id: "t.unit",
+      entities: ["UNIT_ID"],
+      locales: ["*"],
+      analyze: (v) => {
+        const at = v.original.indexOf("L");
+        return [{ entity: "UNIT_ID", start: at, end: at + 1, score: 0.9, recognizer: "t.unit", trace: [{ rule: "context", detail: "id" }] }];
+      },
+    };
+    expect(found([unit], "id L, then 500 kg/L and L again")).toEqual(["t.unit:L"]);
+  });
+
+  it("copies the source finding's score and attributes, with a trace that names it", () => {
+    const withAttrs: Recognizer = {
+      id: "t.attrs",
+      entities: ["ATTR_ID"],
+      locales: ["*"],
+      analyze: (v) => {
+        const at = v.original.indexOf("abc123");
+        return [{ entity: "ATTR_ID", start: at, end: at + 6, score: 0.8, recognizer: "t.attrs", trace: [{ rule: "validator" }], attrs: { kind: "x" } }];
+      },
+    };
+    const engine = createEngine(config, { recognizers: [withAttrs] });
+    const copy = engine.analyze("abc123 and ABC123").findings.at(1);
+    expect(copy).toMatchObject({ recognizer: "core.propagation", score: 0.8, attrs: { kind: "x" } });
+    expect(copy!.trace).toEqual([{ rule: "propagation", detail: "from t.attrs" }]);
+  });
+
+  it("adds no copy where a finding of the same entity already covers the mention", () => {
+    expect(found([cmnd], "CMND 012345678 and cmnd 012345678")).toEqual(["t.cmnd:012345678", "t.cmnd:012345678"]);
+  });
+
+  it("leaves known values alone — they are document-wide already", () => {
+    const { findings } = createEngine(config).analyze("Hoa and Hoa", { knownValues: { PERSON: ["Hoa"] } });
+    expect(findings.map((f) => f.recognizer)).toEqual(["core.known-values", "core.known-values"]);
   });
 });
 

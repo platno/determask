@@ -49,6 +49,20 @@ So a weak, generic shape (`\d{9}` for a legacy ID card) gets a low pattern
 score and is masked only with context; a checksum-validated identifier gets a
 high score and is masked anywhere (F1, F2).
 
+6. **Propagation** (D11). Once a value has been found and *vouched for* — its
+   validator passed or a context word was present — every other occurrence
+   of the same value in the document is masked too, matched the way
+   `knownValues` are (folded, and numbers whatever their grouping). So
+   "CMND 012345678 … gọi lại số 012345678" masks both, though only the first
+   has its label, and both get the same placeholder. The copies carry the
+   recognizer id `core.propagation`, the source's score and attributes, and
+   a trace naming the source. Three guards keep it from spreading noise:
+   a finding only its bare pattern supports is not copied; values shorter
+   than 3 characters are never copied (a one-letter match must not mask
+   every "L" in "500 kg/L"); and a mention already covered by a finding of
+   the same entity gets no second span. A hand-written recognizer opts in
+   by putting a `validator` or `context` step in a finding's `trace`.
+
 ## Rules the toolkit enforces
 
 - **Patterns run on the folded view**: lower case, accents stripped, `đ→d`,

@@ -27,7 +27,7 @@ describe("end to end: a synthetic clinic record", () => {
   const record =
     "Patient Tan Wei Ling, NRIC S1234567D, HP 9123 4567, " +
     "address Blk 123 Tampines Street 11, Singapore 521123. " +
-    "BP 128/84 mmHg, HbA1c 6.1%, ref no 91234567.";
+    "BP 128/84 mmHg, HbA1c 6.1%, ref no 87654321.";
 
   it("masks the NRIC, phone and postal code, and keeps the vitals and the reference number", () => {
     const { findings } = engine.analyze(record, { knownValues: { PERSON: ["Tan Wei Ling"] } });
@@ -35,7 +35,7 @@ describe("end to end: a synthetic clinic record", () => {
     expect(text).toBe(
       "Patient ⟦PERSON_1⟧, NRIC ⟦SG_NRIC_FIN_1⟧, HP ⟦PHONE_NUMBER_1⟧, " +
         "address Blk 123 Tampines Street 11, Singapore ⟦SG_POSTAL_CODE_1⟧. " +
-        "BP 128/84 mmHg, HbA1c 6.1%, ref no 91234567.",
+        "BP 128/84 mmHg, HbA1c 6.1%, ref no 87654321.",
     );
     expect(engine.restore(text, map)).toBe(record);
   });

@@ -22,6 +22,7 @@
 import { ConfigError, RestoreError, WithheldError } from "./errors.js";
 import { foldText } from "./fold.js";
 import { matchKnownValues } from "./knownValues.js";
+import { propagate } from "./propagate.js";
 import type {
   AnalyzeContext,
   AnalyzeOptions,
@@ -293,8 +294,9 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
     }
 
     const kept = dedupeSameType(findings).filter((f) => f.score >= threshold(f.entity));
-    kept.sort((a, b) => a.start - b.start || a.end - b.end);
-    return { findings: kept };
+    const all = dedupeSameType([...kept, ...propagate(views, kept)]);
+    all.sort((a, b) => a.start - b.start || a.end - b.end);
+    return { findings: all };
   }
 
   function anonymize(
