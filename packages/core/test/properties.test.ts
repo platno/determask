@@ -4,7 +4,7 @@
  * code: it only knows which code units some span covered.
  */
 import { describe, expect, it } from "vitest";
-import { createEngine, type Span } from "../src/index.js";
+import { createEngine, foldText, foldValue, hasWordBoundaries, matchKnownValues, type Span } from "../src/index.js";
 
 /** mulberry32 — a tiny deterministic PRNG. */
 function prng(seed: number): () => number {
@@ -100,6 +100,45 @@ describe(`anonymize/restore properties (${CASES} seeded random cases)`, () => {
       const { text, spans } = randomCase(rand);
       const reversed = engine.anonymize(text, [...spans].reverse());
       expect(reversed, `case ${k}`).toEqual(engine.anonymize(text, spans));
+    }
+  });
+});
+
+describe("known values: one-pass matching equals a search per value (D6, D11)", () => {
+  // The reference is the per-value indexOf search the automaton replaced.
+  function reference(text: string, values: Record<string, string[]>): string[] {
+    const { text: folded, starts, ends } = foldText(text);
+    const out: string[] = [];
+    for (const [entity, list] of Object.entries(values)) {
+      for (const value of list) {
+        const needle = foldValue(value);
+        if (needle.length === 0) continue; // no digits in this alphabet, so never the number path
+        for (let at = folded.indexOf(needle); at !== -1; at = folded.indexOf(needle, at + 1)) {
+          if (!hasWordBoundaries(folded, at, at + needle.length)) continue;
+          out.push(`${entity}@${starts[at]}-${ends[at + needle.length - 1]}`);
+        }
+      }
+    }
+    return out;
+  }
+
+  it("finds the same spans, in the same order, over 5,000 seeded cases", () => {
+    // A small alphabet makes values overlap and share prefixes and suffixes,
+    // which is where an automaton's fail links go wrong.
+    const letters = ["a", "b", "A", "á", " ", "đ", "Đ", "-"];
+    const rand = prng(0xd6);
+    for (let run = 0; run < 5_000; run++) {
+      const word = (max: number) =>
+        Array.from({ length: 1 + Math.floor(rand() * max) }, () => letters[Math.floor(rand() * letters.length)]).join("");
+      const text = word(40);
+      const values: Record<string, string[]> = {
+        PERSON: Array.from({ length: 1 + Math.floor(rand() * 4) }, () => word(5)),
+        PLACE: Array.from({ length: Math.floor(rand() * 3) }, () => word(4)),
+      };
+      const got = matchKnownValues({ original: text, folded: foldText(text) }, values).map(
+        (s) => `${s.entity}@${s.start}-${s.end}`,
+      );
+      expect(got, JSON.stringify({ text, values })).toEqual(reference(text, values));
     }
   });
 });
