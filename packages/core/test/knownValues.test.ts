@@ -91,4 +91,19 @@ describe("matchKnownValues (D11)", () => {
     expect(surfaces("aaa", { PERSON: ["aa"] })).toEqual([]);
     expect(surfaces("aa aa", { PERSON: ["aa"] })).toEqual(["aa", "aa"]);
   });
+
+  describe("spellings without a diacritic or as two letters (EMEA round 3)", () => {
+    it("matches ß and ss, Turkish ı and i, ø, ł and þ either way", () => {
+      expect(surfaces("Adresse: Hauptstrasse 15", { ADDRESS: ["Hauptstraße 15"] })).toEqual(["Hauptstrasse 15"]);
+      expect(surfaces("HAUPTSTRAẞE 15", { ADDRESS: ["Hauptstrasse 15"] })).toEqual(["HAUPTSTRAẞE 15"]);
+      expect(surfaces("Hasta: ISIL YILMAZ", { PERSON: ["Işıl Yılmaz"] })).toEqual(["ISIL YILMAZ"]);
+      expect(surfaces("Soren Lukasz Thor", { PERSON: ["Søren", "Łukasz", "Þór"] })).toEqual(["Soren", "Lukasz", "Thor"]);
+    });
+
+    it("matches Greek capitals with a final sigma, and Arabic spelling variants", () => {
+      expect(surfaces("ΟΔΥΣΣΕΑΣ", { PERSON: ["Οδυσσέας"] })).toEqual(["ΟΔΥΣΣΕΑΣ"]);
+      expect(surfaces("المريض محـــمد", { PERSON: ["محمد"] })).toEqual(["محـــمد"]);
+      expect(surfaces("فاطمه و مصطفي", { PERSON: ["فاطمة", "مصطفى"] })).toEqual(["فاطمه", "مصطفي"]);
+    });
+  });
 });

@@ -65,7 +65,11 @@ high score and is masked anywhere (F1, F2).
 - **Every Unicode decimal digit is ASCII in the folded view** (Arabic-Indic,
   Persian, Devanagari, Thai, …), and **Cyrillic is Latin** (Serbian standard:
   `ђ→d`, `ћ`/`ч→c`, `ж→z`, `ш→s`, `џ→dz`, `љ→lj`, `њ→nj`). A pattern
-  written for ASCII digits and Latin letters covers every script.
+  written for ASCII digits and Latin letters covers every script. Letters
+  people often type without their diacritic, or as two letters, fold to
+  that plain form: `ß→ss`, Turkish `ı→i`, `ø→o`, `ł→l`, `þ→th`, `æ→ae`,
+  `œ→oe`, Greek final `ς→σ`, Arabic `ة→ه` and `ى→ي`; the Arabic tatweel
+  `ـ` folds to nothing.
 - **Context words match whole words** on the folded view, within `window`
   code units (default 40), and the window **stops at the nearest other
   number**: in "CCCD 001…, SĐT 0912…" the phone does not get the CCCD's
