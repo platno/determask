@@ -127,7 +127,8 @@ describe("MY_NRIC — the MyKad number", () => {
     for (const s of [
       "Order no. 850615142468",
       "No. pesanan 850615142468",
-      "Invoice 850615-14-2468",
+      "Invoice no. 850615-14-2468",
+      "Nombor invois 850615142468",
       "no. resit: 850615142468",
       "Tracking number 850615142468",
     ]) {
@@ -136,7 +137,10 @@ describe("MY_NRIC — the MyKad number", () => {
   });
 
   it("does not reject an IC because of a common word nearby", () => {
-    // "order" alone, "pesanan" (also "message") and "akaun" (account) are not anti-context
+    // An anti-context word rejects the value even with "IC" closer to it,
+    // so bare nouns — "invoice", "order", "pesanan" (also "message"),
+    // "akaun" (account) — are not anti-context; only labels are.
+    expect(found("Invoice sent to employer, IC 850615-14-2468")).toEqual(["MY_NRIC:850615-14-2468"]);
     expect(found("Doctor's order: repeat FBC, IC 850615-14-2468")).toEqual(["MY_NRIC:850615-14-2468"]);
     expect(found("Pesanan: sila bawa IC 850615142468")).toEqual(["MY_NRIC:850615142468"]);
     expect(found("Akaun MySejahtera, IC 850615142468")).toEqual(["MY_NRIC:850615142468"]);
@@ -202,7 +206,7 @@ describe("PHONE_NUMBER (Malaysia)", () => {
   });
 
   it("does not mask a number after an invoice or order word", () => {
-    expect(found("Invoice 0123456789")).toEqual([]);
+    expect(found("Invoice no. 0123456789")).toEqual([]);
     expect(found("Order no. 03-2345 6789")).toEqual([]);
   });
 });

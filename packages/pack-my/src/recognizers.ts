@@ -19,15 +19,16 @@ const DASH = "\\-\\u2010-\\u2015\\u2212";
  * Words that mean the number after them belongs to an invoice, an order, a
  * receipt or a parcel — not to a person. ⛔ Keep these SPECIFIC: an
  * anti-context word rejects the candidate even when an IC or phone word
- * sits closer to the value, so a common word here is a leak. Deliberately
- * NOT here: "order" and "pesanan" alone ("doctor's order"; "pesanan" is also
- * "message"), "tracking" alone, the period-less "order no" ("order no
- * further tests"), and "akaun" / "account" — a bank account number is
- * personal data too, and masking it as an IC or a phone is the safe
- * direction.
+ * sits closer to the value ("Invoice sent to employer, IC 850615…" would
+ * leak), so only labels are here, never bare nouns. Deliberately NOT here:
+ * "invoice" / "invois", "order", "pesanan" (also "message") and "tracking"
+ * alone, the period-less "order no" ("order no further tests"), and
+ * "akaun" / "account" — a bank account number is personal data too.
+ * Masking a number these would have caught is the safe direction.
  */
 const NOT_PERSONAL = [
-  "invoice", "invois", "order no.", "order number", "order id", "no. pesanan", "nombor pesanan",
+  "invoice no.", "invoice number", "no. invois", "nombor invois",
+  "order no.", "order number", "order id", "no. pesanan", "nombor pesanan",
   "receipt no.", "no. resit", "nombor resit", "tracking no.", "tracking number",
 ];
 
@@ -150,7 +151,7 @@ export const phone = patternRecognizer({
       "Rumah ⟪(03) 2345 6789⟫, ⟪(088) 234 567⟫",
     ],
     noMatch: [
-      "Invoice 0123456789",
+      "Invoice no. 0123456789",
       "012-345 678", // one digit short
       "015-234 5678", // 015 needs eight digits
       "03-1234 5678", // no subscriber number starts with 1

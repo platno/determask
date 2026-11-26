@@ -75,16 +75,18 @@ MyKad findings carry `attrs.date` (`"valid"` or `"invalid"`) and
   dot or dash between any two digits, including digit-by-digit dictation
   (`0 1 2 3 4 5 6 7 8 9`). The folded view does not turn Unicode dashes
   (U+2010–U+2015, U+2212) into `-`, so these patterns list them.
-- **Order and invoice numbers are not ICs.** "Order no.", "order number",
-  "order id", "no. pesanan", "invoice", "invois", "receipt no.", "no. resit",
-  "tracking no." and "tracking number" *before* a number reject it as an IC
-  and as a phone. The list is kept narrow, because an anti-context word
-  rejects the value even when an IC word sits closer to it. Deliberately
-  not on it: "order" alone ("doctor's order"), "pesanan" alone (also
-  "message"), "order no" without the period ("order no further tests"),
-  "tracking" alone, and "akaun" / "account" — a bank account number is
-  personal data too, so masking it as an IC or a phone is the safe
-  direction.
+- **Order and invoice numbers are not ICs.** The labels "invoice no.",
+  "invoice number", "no. invois", "order no.", "order number", "order id",
+  "no. pesanan", "receipt no.", "no. resit", "tracking no." and "tracking
+  number" (and their "nombor …" forms) *before* a number reject it as an IC
+  and as a phone. The list holds labels only, because an anti-context word
+  rejects the value even when an IC word sits closer to it: with "invoice"
+  on the list, "Invoice sent to employer, IC 850615-14-2468" would leak.
+  Deliberately not on it: "invoice" / "invois", "order", "pesanan" (also
+  "message") and "tracking" alone, "order no" without the period ("order no
+  further tests"), and "akaun" / "account" — a bank account number is
+  personal data too. So "Invoice 850615142468" is masked as an IC: the
+  safe direction.
 - **Twelve digits can be an IC and a phone at once.** `601123456789` is
   both `+60 11-2345 6789` without the plus and an IC for 23 November 1960,
   PB 45. It is masked either way; a phone word nearby labels it
