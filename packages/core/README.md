@@ -5,8 +5,8 @@ offset-mapped matching view, overlap resolution, the placeholder operator,
 and the toolkit locale packs build their recognizers with.
 
 Pure TypeScript, no runtime dependencies, no network, the same output on
-Node, Bun and Deno. See the [main README](../../README.md) for the API and
-what works today, and [docs/RECOGNIZERS.md](../../docs/RECOGNIZERS.md) for
+Node, Bun and Deno. See the [main README](https://github.com/platno/determask/blob/main/README.md) for the API and
+what works today, and [docs/RECOGNIZERS.md](https://github.com/platno/determask/blob/main/docs/RECOGNIZERS.md) for
 writing a recognizer.
 
-Not published to npm yet.
+Published to npm as an alpha: `npm install @determask/core@alpha`.

@@ -17,7 +17,8 @@
     "check": "pnpm build && pnpm typecheck && pnpm test && pnpm smoke && pnpm lint:redos",
     "test:watch": "vitest",
     "claims": "vitest run packages/core/test/claims.test.ts --reporter=verbose",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "verify:pack": "node scripts/verify-pack.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

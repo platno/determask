@@ -1,0 +1,77 @@
+name: Release
+
+# Publishes every package to npm when a version tag is pushed. Nothing else
+# publishes: no manual `npm publish`, no publishing from a branch.
+#
+# Guards, in order: the tagged commit must already be on main (so only
+# reviewed, merged code ships); the tag must equal every package's version;
+# the full check and the tarball gate must pass. Packages are published with
+# npm provenance, which links each tarball to this workflow run and commit.
+#
+# Setup the owner does once: see RELEASING.md.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Add required reviewers to this environment in the repository settings
+    # to approve each publish by hand.
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: The tagged commit is on main
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::$GITHUB_REF_NAME points at a commit that is not on main"; exit 1; }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - name: The tag matches every package's version
+        id: version
+        run: node scripts/release-tag.mjs "$GITHUB_REF_NAME"
+      - run: pnpm check
+      - run: pnpm verify:pack
+      # pnpm pack rewrites workspace:* to the release version; npm publishes
+      # the tarballs, because trusted publishing (OIDC) needs npm >= 11.5.1
+      # and Node 22 bundles npm 10.
+      - name: Pack
+        run: |
+          mkdir -p release
+          for dir in packages/core packages/pack-*; do (cd "$dir" && pnpm pack --pack-destination ../../release); done
+      - name: Use npm 11
+        run: npm install -g npm@11.6.2
+      - name: Publish (core first; a version already on npm is skipped, so a failed run can be re-run)
+        env:
+          # Only for the first release; RELEASING.md moves to trusted publishing after it.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DIST_TAG: ${{ steps.version.outputs.dist-tag }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          for tgz in release/determask-core-*.tgz release/determask-pack-*.tgz; do
+            name=$(tar -xOzf "$tgz" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).name')
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already on npm; skipping"
+              continue
+            fi
+            npm publish "$tgz" --access public --tag "$DIST_TAG" --provenance
+          done

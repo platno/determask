@@ -25,6 +25,7 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck            # packages and test files
       - run: pnpm test                 # fails below 100% line/branch/function coverage
+      - run: pnpm verify:pack          # the tarballs npm would get, installed and run by package name
       - run: pnpm smoke                # the built package, README example, on Node
       - run: pnpm lint:redos
 

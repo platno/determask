@@ -8,9 +8,11 @@ LLM and agent prompts, machine-translation requests, support tickets and
 chat transcripts, analytics exports, test fixtures — and clinical notes,
 the hardest case, where it was proven first.
 
-> **Status: pre-alpha.** The architecture is settled and documented; the
-> engine is being built milestone by milestone. Nothing here is ready to
-> protect real personal data yet. See [ROADMAP.md](ROADMAP.md).
+> **Status: alpha** — `0.1.0-alpha.0`, published under the npm `alpha` tag.
+> What is listed under [What works today](#what-works-today) is built and
+> tested; names, addresses and dates are not detected yet, and no recall
+> figures are published. Evaluate it on your own data before you rely on it
+> for real personal data. See [ROADMAP.md](ROADMAP.md).
 
 ## Why another redactor
 
@@ -79,6 +81,19 @@ The first consumer masks Vietnamese hospital notes before machine
 translation: numbered placeholders inside `<span translate="no">`, a
 reversible map that never leaves the hospital, kinship words kept as
 gender cues.
+
+## Install
+
+```sh
+npm install @determask/core@alpha @determask/pack-core@alpha
+# and the locale packs you need:
+npm install @determask/pack-vi@alpha @determask/pack-sr@alpha @determask/pack-sg@alpha
+```
+
+ESM only, Node 22 or later, Bun or Deno; no runtime dependencies. Each
+package is published from CI with [npm provenance](https://docs.npmjs.com/generating-provenance-statements),
+so its tarball can be traced to the commit and workflow run that built it
+([RELEASING.md](RELEASING.md)).
 
 ## API
 
