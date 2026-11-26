@@ -41,11 +41,12 @@ The first published version. Every package is new.
 - `maskJson` / `restoreJson` for structured data, one placeholder map
   across every field; a tested Sentry `beforeSend` recipe in
   `examples/sentry` (#12).
+- A pattern that matches the empty string is refused at construction (#13).
 
 ### Locale packs
 
-- `@determask/pack-core`: email, URL, IPv4, IPv6, payment card (Luhn and
-  IIN brand), IBAN (MOD 97-10).
+- `@determask/pack-core`: email (quoted local parts too, #13), URL, IPv4,
+  IPv6, payment card (Luhn and IIN brand), IBAN (MOD 97-10).
 - `@determask/pack-vi`: CCCD, legacy CMND, MST tax code, BHYT, BHXH, phones.
 - `@determask/pack-sr`: JMBG, PIB, bank account (MOD 97), LBO, phones.
 - `@determask/pack-sg`: NRIC/FIN (an unverified check letter is still
