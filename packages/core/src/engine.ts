@@ -20,7 +20,7 @@
  *   - strict restore throws on any unknown placeholder.
  */
 import { ConfigError, RestoreError, WithheldError } from "./errors.js";
-import { foldText } from "./fold.js";
+import { foldText, foldValue } from "./fold.js";
 import { matchKnownValues } from "./knownValues.js";
 import type {
   AnalyzeContext,
@@ -248,6 +248,55 @@ function snapToCodePoints(span: Span, text: string): Span {
   return start === span.start && end === span.end ? span : { ...span, start, end };
 }
 
+export const PROPAGATION_RECOGNIZER_ID = "core.propagation";
+
+/** The shortest value (folded) that is copied across a document. */
+const MIN_PROPAGATED_LENGTH = 3;
+
+/** Did something beyond the bare pattern vouch for this finding? */
+const vouched = (span: Span): boolean => span.trace.some((step) => step.rule === "validator" || step.rule === "context");
+
+/**
+ * D11, second half: a value detected once is masked everywhere in the
+ * document — the mention without its "CMND" label, the regrouped number.
+ *
+ * Guarded, because a wrong finding copied everywhere does real damage
+ * (llm-pii-proxy #28: a word read as a name corrupted every later mention).
+ * A finding propagates only when something beyond its bare shape vouched
+ * for it — a validator, or a context word — and never when it folds to
+ * fewer than 3 characters. Known values are already document-wide; their
+ * trace step is "known-value", so they never count as vouched.
+ * Matching reuses the known-values matcher, so case, accents, script and
+ * number grouping are folded the same way.
+ */
+function propagate(views: TextViews, findings: readonly Span[]): Span[] {
+  const out: Span[] = [];
+  const done = new Set<string>();
+  for (const span of findings) {
+    if (!vouched(span)) continue;
+    const value = views.original.slice(span.start, span.end);
+    const folded = foldValue(value);
+    if (folded.length < MIN_PROPAGATED_LENGTH) continue;
+    const key = `${span.entity}\u0000${folded}`;
+    if (done.has(key)) continue;
+    done.add(key);
+    for (const match of matchKnownValues(views, { [span.entity]: [value] })) {
+      // A mention some finding of the same entity already covers needs no copy
+      // (e.g. the "+84 912…" phone and its digits without the "+").
+      const covered = findings.some((f) => f.entity === span.entity && f.start < match.end && match.start < f.end);
+      if (covered) continue;
+      out.push({
+        ...match,
+        score: span.score,
+        recognizer: PROPAGATION_RECOGNIZER_ID,
+        trace: [{ rule: "propagation", detail: `from ${span.recognizer}` }],
+        ...(span.attrs !== undefined ? { attrs: span.attrs } : {}),
+      });
+    }
+  }
+  return out;
+}
+
 export function createEngine(config: EngineConfig, options: EngineOptions = {}): Engine {
   validateConfig(config);
   const recognizers = collectRecognizers(options);
@@ -293,8 +342,9 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
     }
 
     const kept = dedupeSameType(findings).filter((f) => f.score >= threshold(f.entity));
-    kept.sort((a, b) => a.start - b.start || a.end - b.end);
-    return { findings: kept };
+    const all = dedupeSameType([...kept, ...propagate(views, kept)]);
+    all.sort((a, b) => a.start - b.start || a.end - b.end);
+    return { findings: all };
   }
 
   function anonymize(

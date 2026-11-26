@@ -222,7 +222,20 @@ describe("ARCHITECTURE — decisions", () => {
     expect(engine.analyze("An", { knownValues: { PERSON: ["An"] } }).findings).toHaveLength(1);
     expect(engine.analyze("SĐT 0912.345.678", { knownValues: { PHONE_NUMBER: ["0912345678"] } }).findings).toHaveLength(1);
   });
-  it.todo("D11 a value DETECTED once by a pattern is masked everywhere in the document (M2)");
+  it("D11 a value detected once — and vouched for by a validator or context — is masked everywhere in the document", () => {
+    const labelled = patternRecognizer({
+      id: "claims.labelled",
+      entity: "LABELLED_ID",
+      locales: ["*"],
+      patterns: [{ name: "nine", regex: "(?<!\\d)\\d{9}(?!\\d)", score: 0.2 }],
+      context: ["cmnd"],
+      contextBoost: 0.4,
+      examples: { match: ["cmnd ⟪012345678⟫"], noMatch: ["012345678"] },
+    });
+    const text = "CMND 012345678; later: 012345678";
+    const engine = createEngine(config, { recognizers: [labelled] });
+    expect(engine.anonymize(text, engine.analyze(text).findings).text).toBe("CMND ⟦LABELLED_ID_1⟧; later: ⟦LABELLED_ID_1⟧");
+  });
 
   it.todo("D12 protected layer per domain pack: clinical, logs, support (M2, M8)");
   it.todo("D13 default-deny residual mode per field (M8)");
