@@ -38,6 +38,9 @@ The first published version. Every package is new.
   masked everywhere in the document (#9).
 - Word boundaries in scripts written without spaces: names glued to
   particles in Japanese, Korean, Chinese and Thai are masked (#10).
+- `maskJson` / `restoreJson` for structured data, one placeholder map
+  across every field; a tested Sentry `beforeSend` recipe in
+  `examples/sentry` (#12).
 
 ### Locale packs
 
