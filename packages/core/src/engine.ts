@@ -158,16 +158,32 @@ function collectRecognizers(options: EngineOptions): Recognizer[] {
   return all;
 }
 
+/** A BCP 47 tag compared case-insensitively and without its script: "sr-Latn-RS" → "sr-rs". */
+const localeKey = (tag: string): string =>
+  tag
+    .toLowerCase()
+    .split("-")
+    .filter((part, i) => !(i > 0 && /^[a-z]{4}$/u.test(part)))
+    .join("-");
+
 /**
- * Which recognizers serve a locale (D15/F15). "*" serves every locale; a
- * tag matches exactly or by primary language ("vi" serves "vi-VN"). With
- * no locale known, EVERY recognizer runs: an unknown locale must cost
- * over-masking, never silently dropped recall.
+ * Is `r` made for `locale` — not merely locale-independent ("*")? A tag
+ * matches exactly or by primary language ("vi" serves "vi-VN"), ignoring
+ * case and script ("sr-RS" serves "sr-Latn-RS").
+ */
+function madeFor(r: Recognizer, locale: string): boolean {
+  const key = localeKey(locale);
+  const lang = key.split("-")[0];
+  return r.locales.some((l) => l !== "*" && (localeKey(l) === key || localeKey(l) === lang));
+}
+
+/**
+ * Which recognizers serve a locale (D15/F15): those made for it, plus the
+ * locale-independent ones. With no locale known, EVERY recognizer runs: an
+ * unknown locale must cost over-masking, never silently dropped recall.
  */
 function servesLocale(r: Recognizer, locale: string | undefined): boolean {
-  if (locale === undefined) return true;
-  const lang = locale.split("-")[0];
-  return r.locales.some((l) => l === "*" || l === locale || l === lang);
+  return locale === undefined || r.locales.includes("*") || madeFor(r, locale);
 }
 
 /** Deterministic tie-break (D10): score, then length, then start, then entity. */
@@ -260,9 +276,7 @@ function snapToCodePoints(span: Span, text: string): Span {
 function assertDeclaredCoverage(config: EngineConfig, recognizers: readonly Recognizer[]): void {
   const declared = config.locales === undefined ? [] : [config.locales.primary, ...(config.locales.also ?? [])];
   for (const locale of declared) {
-    const lang = locale.split("-")[0];
-    const served = recognizers.some((r) => r.locales.some((l) => l !== "*" && (l === locale || l === lang)));
-    if (!served) {
+    if (!recognizers.some((r) => madeFor(r, locale))) {
       throw new ConfigError(
         `no loaded recognizer serves locale ${JSON.stringify(locale)}: load its pack, or remove it from config.locales`,
       );
@@ -287,7 +301,11 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
     Object.hasOwn(perEntity, entity) ? (perEntity[entity] as number) : defaultThreshold;
 
   function analyze(text: string, analyzeOptions: AnalyzeOptions = {}): AnalyzeResult {
-    const locale = analyzeOptions.locale ?? config.locales?.primary;
+    const requested = analyzeOptions.locale ?? config.locales?.primary;
+    // A locale no loaded recognizer is made for is an unknown locale, and an
+    // unknown locale runs every recognizer: "hr-HR" with only pack-sr loaded
+    // must still find a JMBG, not silently run the generic recognizers alone.
+    const locale = requested !== undefined && recognizers.some((r) => madeFor(r, requested)) ? requested : undefined;
     const views: TextViews = { original: text, folded: foldText(text) };
     const findings: Span[] = [];
 
@@ -299,7 +317,7 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
     }
 
     const ctx: AnalyzeContext = {
-      locale: locale ?? "und",
+      locale: requested ?? "und",
       ...(analyzeOptions.knownValues !== undefined ? { knownValues: analyzeOptions.knownValues } : {}),
       ...(analyzeOptions.documentId !== undefined ? { documentId: analyzeOptions.documentId } : {}),
     };

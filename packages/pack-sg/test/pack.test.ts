@@ -57,8 +57,10 @@ describe("end to end: a synthetic clinic record", () => {
     expect(engine.analyze("+65 9123 4567").findings[0]!.attrs).toEqual({ country: "SG" });
   });
 
-  it("does not run for another locale", () => {
-    expect(engine.analyze("NRIC S1234567D", { locale: "vi-VN" }).findings).toEqual([]);
+  it("does not run for a locale another loaded pack is made for", () => {
+    const withVi = createEngine({ configVersion: 1 }, { packs: [sgPack], recognizers: [{ id: "t.other", entities: ["OTHER"], locales: ["vi-VN"], analyze: () => [] }] });
+    expect(withVi.analyze("NRIC S1234567D", { locale: "vi-VN" }).findings).toEqual([]);
+    expect(engine.analyze("NRIC S1234567D", { locale: "en-MY" }).findings).toHaveLength(1); // nothing is made for en-MY
   });
 });
 

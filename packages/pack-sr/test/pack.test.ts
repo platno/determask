@@ -27,7 +27,15 @@ describe("@determask/pack-sr — pack contract", () => {
   it("serves the script-specific locale tags too", () => {
     expect(found("JMBG 0101990710008", "sr-Cyrl-RS")).toEqual(["RS_PERSONAL_ID:0101990710008"]);
     expect(found("JMBG 0101990710008", "sr-Latn-RS")).toEqual(["RS_PERSONAL_ID:0101990710008"]);
-    expect(found("JMBG 0101990710008", "vi-VN")).toEqual([]);
+  });
+
+  it("does not run for a locale another loaded pack is made for, and runs for one nothing is made for", () => {
+    const withVi = createEngine({ configVersion: 1 }, { packs: [srPack], recognizers: [{ id: "t.other", entities: ["OTHER"], locales: ["vi-VN"], analyze: () => [] }] });
+    expect(withVi.analyze("JMBG 0101990710008", { locale: "vi-VN" }).findings).toEqual([]);
+    // JMBG is also used in Bosnia, Montenegro and North Macedonia.
+    for (const locale of ["bs-BA", "sr-Latn-ME", "mk-MK", "hr-HR"]) {
+      expect(found("JMBG 0101990710008", locale), locale).toEqual(["RS_PERSONAL_ID:0101990710008"]);
+    }
   });
 });
 
