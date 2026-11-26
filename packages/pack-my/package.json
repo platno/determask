@@ -1,0 +1,41 @@
+{
+  "name": "@determask/pack-my",
+  "version": "0.0.1",
+  "description": "Malaysian locale pack for determask: MyKad (NRIC), phones, passports.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/platno/determask.git",
+    "directory": "packages/pack-my"
+  },
+  "homepage": "https://github.com/platno/determask/tree/main/packages/pack-my#readme",
+  "bugs": {
+    "url": "https://github.com/platno/determask/issues"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --root ../.. packages/pack-my/"
+  },
+  "dependencies": {
+    "@determask/core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

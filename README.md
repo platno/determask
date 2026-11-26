@@ -50,8 +50,8 @@ Two independent axes, each a separate package you install only if you need
 it:
 
 - **Locale packs** know a country's identifiers, phone formats, names,
-  addresses and context words: Vietnamese, Serbian, Singapore, US — and any
-  other language through the same pack contract.
+  addresses and context words: Vietnamese, Serbian, Singapore, Malaysian,
+  US — and any other language through the same pack contract.
 - **Domain packs** know what must survive in a kind of text: clinical
   (vitals, doses, lab values, ICD/ATC codes), logs and observability (UUIDs,
   trace ids, hashes, timestamps, versions), commerce and support (order
