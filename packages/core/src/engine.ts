@@ -248,9 +248,39 @@ function snapToCodePoints(span: Span, text: string): Span {
   return start === span.start && end === span.end ? span : { ...span, start, end };
 }
 
+/**
+ * Fail closed on configuration that promises coverage nothing delivers
+ * (D14/D20). A locale named in `config.locales` must be served by at least
+ * one recognizer made for it — "*" recognizers do not count, or
+ * `primary: "en-SG"` with only pack-core loaded would run without error and
+ * pass every NRIC through. A per-entity threshold must name an entity some
+ * loaded recognizer reports, or it guards nothing. (NVIDIA NeMo Guardrails
+ * #2643 is this bug in another tool.)
+ */
+function assertDeclaredCoverage(config: EngineConfig, recognizers: readonly Recognizer[]): void {
+  const declared = config.locales === undefined ? [] : [config.locales.primary, ...(config.locales.also ?? [])];
+  for (const locale of declared) {
+    const lang = locale.split("-")[0];
+    const served = recognizers.some((r) => r.locales.some((l) => l !== "*" && (l === locale || l === lang)));
+    if (!served) {
+      throw new ConfigError(
+        `no loaded recognizer serves locale ${JSON.stringify(locale)}: load its pack, or remove it from config.locales`,
+      );
+    }
+  }
+  for (const entity of Object.keys(config.thresholds?.perEntity ?? {})) {
+    if (!recognizers.some((r) => r.entities.includes(entity))) {
+      throw new ConfigError(
+        `config.thresholds.perEntity names ${entity}, which no loaded recognizer reports: load its pack, or remove the threshold`,
+      );
+    }
+  }
+}
+
 export function createEngine(config: EngineConfig, options: EngineOptions = {}): Engine {
   validateConfig(config);
   const recognizers = collectRecognizers(options);
+  assertDeclaredCoverage(config, recognizers);
   const defaultThreshold = config.thresholds?.default ?? DEFAULT_THRESHOLD;
   const perEntity = config.thresholds?.perEntity ?? {};
   const threshold = (entity: string): number =>

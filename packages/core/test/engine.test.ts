@@ -43,14 +43,19 @@ describe("config validation — fail closed at load (F13/F14, D20)", () => {
     });
   }
 
-  it("accepts a complete valid config", () => {
+  it("accepts a complete valid config, with recognizers for every locale it declares", () => {
+    const serves = (id: string, locale: string) => ({ id, entities: ["X"], locales: [locale], analyze: () => [] });
     expect(() =>
-      createEngine({
-        configVersion: 1,
-        name: "full",
-        locales: { primary: "vi-VN", also: ["en-US"] },
-        onError: "withhold",
-      }),
+      createEngine(
+        {
+          configVersion: 1,
+          name: "full",
+          locales: { primary: "vi-VN", also: ["en-US"] },
+          thresholds: { default: 0.6, perEntity: { X: 0.7 } },
+          onError: "withhold",
+        },
+        { recognizers: [serves("t.vi", "vi-VN"), serves("t.en", "en")] },
+      ),
     ).not.toThrow();
   });
 

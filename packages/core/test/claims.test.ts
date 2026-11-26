@@ -236,6 +236,11 @@ describe("ARCHITECTURE — decisions", () => {
     const sr: Recognizer = { id: "sr.x", entities: ["X"], locales: ["sr-RS"], analyze: () => [{ entity: "X", start: 0, end: 1, score: 1, recognizer: "sr.x", trace: [] }] };
     expect(createEngine(config, { recognizers: [sr] }).analyze("x").findings).toHaveLength(1);
   });
+  it("D15/D14 a locale or entity the config declares, but nothing loaded serves, refuses to load", () => {
+    const core: Recognizer = { id: "core.x", entities: ["X"], locales: ["*"], analyze: () => [] };
+    expect(() => createEngine({ configVersion: 1, locales: { primary: "en-SG" } }, { recognizers: [core] })).toThrow(ConfigError);
+    expect(() => createEngine({ configVersion: 1, thresholds: { perEntity: { SG_NRIC_FIN: 0.6 } } }, { recognizers: [core] })).toThrow(ConfigError);
+  });
   it.todo("D16 data packs versioned separately with valid_from/valid_to and provenance (M7)");
 
   it("D17 findings carry no text, and errors never quote the input", () => {

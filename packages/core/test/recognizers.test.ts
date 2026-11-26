@@ -131,6 +131,49 @@ describe("recognizer failures fail closed (D14, D17)", () => {
   });
 });
 
+describe("declared coverage fails closed at load (D14, D20)", () => {
+  const any = literal("t.any", "ANY_THING", "x", ["*"]);
+  const vi = literal("t.vi", "VI_THING", "x", ["vi-VN"]);
+  const viLang = literal("t.vi-lang", "VI_LANG_THING", "x", ["vi"]);
+
+  it("refuses a primary locale that only locale-independent recognizers serve", () => {
+    expect(() => createEngine({ configVersion: 1, locales: { primary: "en-SG" } }, { recognizers: [any] })).toThrow(
+      /no loaded recognizer serves locale "en-SG"/,
+    );
+  });
+
+  it("refuses a primary locale when nothing is loaded at all", () => {
+    expect(() => createEngine({ configVersion: 1, locales: { primary: "vi-VN" } })).toThrow(ConfigError);
+  });
+
+  it("refuses an `also` locale nothing serves, even when the primary one is served", () => {
+    expect(() =>
+      createEngine({ configVersion: 1, locales: { primary: "vi-VN", also: ["sr-RS"] } }, { recognizers: [vi] }),
+    ).toThrow(/"sr-RS"/);
+  });
+
+  it("accepts a locale served exactly or by its primary language", () => {
+    expect(() => createEngine({ configVersion: 1, locales: { primary: "vi-VN" } }, { recognizers: [vi] })).not.toThrow();
+    expect(() => createEngine({ configVersion: 1, locales: { primary: "vi-VN" } }, { recognizers: [viLang] })).not.toThrow();
+  });
+
+  it("refuses a per-entity threshold for an entity no loaded recognizer reports", () => {
+    expect(() =>
+      createEngine({ configVersion: 1, thresholds: { perEntity: { SG_NRIC_FIN: 0.6 } } }, { recognizers: [any] }),
+    ).toThrow(/SG_NRIC_FIN, which no loaded recognizer reports/);
+  });
+
+  it("accepts a per-entity threshold for an entity a loaded recognizer reports", () => {
+    expect(() =>
+      createEngine({ configVersion: 1, thresholds: { perEntity: { ANY_THING: 0.6 } } }, { recognizers: [any] }),
+    ).not.toThrow();
+  });
+
+  it("asks nothing of an engine that declares no locales and no thresholds", () => {
+    expect(() => createEngine({ configVersion: 1 })).not.toThrow();
+  });
+});
+
 describe("recognizer declarations are checked at load (F14)", () => {
   const ok = literal("t.ok", "OK", "x");
 
