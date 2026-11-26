@@ -1,7 +1,7 @@
 # @determask/pack-my
 
 Malaysian locale pack (`ms-MY`, `en-MY`): the MyKad number, phone numbers
-and passports. Load it with [`@determask/pack-core`](../pack-core) for
+and passports. Load it with [`@determask/pack-core`](https://github.com/platno/determask/tree/main/packages/pack-core) for
 email, URL, IP, card and IBAN.
 
 ```ts
