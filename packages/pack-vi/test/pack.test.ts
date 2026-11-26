@@ -34,6 +34,14 @@ describe("@determask/pack-vi — pack contract", () => {
   });
 });
 
+describe("the label nearest the value decides", () => {
+  it("masks an identifier or phone whose own label is nearer than an earlier anti-context word", () => {
+    expect(found("Hóa đơn gửi bệnh nhân, CCCD 001099012345")).toEqual(["VN_PERSONAL_ID:001099012345"]);
+    expect(found("hóa đơn đã gửi, SĐT 0912 345 678")).toEqual(["PHONE_NUMBER:0912 345 678"]);
+    expect(found("CCCD: xem hóa đơn 001099012345")).toEqual([]); // the anti-context word is nearer
+  });
+});
+
 describe("end to end: a synthetic clinical note", () => {
   const note =
     "Bệnh nhân Nguyễn Văn An, CCCD 001099012345, thẻ BHYT DN4010123456789, " +

@@ -191,9 +191,10 @@ describe("ARCHITECTURE — decisions", () => {
   });
   it.todo("D7 ordered rule sets (hotword, exclusion, adjustment) clamped at each step, Google-style (M1)");
 
-  it("D8 context matches whole words; negative words count only before the value; windows stop at the nearest number", () => {
+  it("D8 context matches whole words; negative words count only before the value, and only when they are the nearest label; windows stop at the nearest number", () => {
     expect(scores(code(), "barcode ab123")).toEqual([]); // not a whole word
-    expect(scores(code(), "invoice code ab123")).toEqual([]); // anti-context before
+    expect(scores(code(), "code invoice ab123")).toEqual([]); // anti-context before, nearest
+    expect(scores(code(), "invoice code ab123")).toHaveLength(1); // the value's own label is nearer
     expect(scores(code(), "code ab123 invoice")).toHaveLength(1); // anti-context after: ignored
     expect(scores(code(), "code 42 ab123")).toEqual([]); // window stops at 42
   });

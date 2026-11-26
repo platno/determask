@@ -157,6 +157,24 @@ describe("patternRecognizer — context and anti-context (D8)", () => {
   it("ignores an anti-context word AFTER the value", () => {
     expect(find(base({ antiContext: ["invoice"] }), "ab123 invoice")).toHaveLength(1);
   });
+
+  it("lets the label nearest the value decide between context and anti-context", () => {
+    const both = base({ context: ["code"], antiContext: ["invoice"] });
+    // The value's own label is closer than the anti-context word: masked.
+    expect(find(both, "Invoice sent to the patient, code ab123")).toHaveLength(1);
+    // The anti-context word is closer: rejected.
+    expect(find(both, "code list: invoice ab123")).toEqual([]);
+    // A context word only after the value does not outrank anti-context before it.
+    expect(find(both, "invoice ab123 code")).toEqual([]);
+  });
+
+  it("compares the nearest occurrence of each word, and only whole words", () => {
+    const both = base({ context: ["code"], antiContext: ["invoice", "inv"] });
+    expect(find(both, "invoice code, invoice ab123")).toEqual([]); // the second invoice is nearest
+    expect(find(both, "invoice, codes and code ab123")).toHaveLength(1);
+    expect(find(both, "code, invoicex ab123")).toHaveLength(1); // "invoicex" is not "invoice" or "inv"
+    expect(find(both, "inv code inv ab123")).toEqual([]);
+  });
 });
 
 describe("patternRecognizer — the spec is checked at load", () => {
