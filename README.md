@@ -110,6 +110,24 @@ Locale packs and your own recognizers plug in at construction:
 const engine = createEngine(config, { packs: [viPack], recognizers: [myMrnRecognizer] });
 ```
 
+Structured data — a log record, an API payload, an error event — goes
+through `maskJson`, which masks every string (and, by default, keys and
+numbers) with one placeholder map, reads each value with its property name
+as extra context, and withholds anything that is not plain JSON:
+
+```ts
+import { createEngine, maskJson, restoreJson } from "@determask/core";
+import { corePack } from "@determask/pack-core";
+
+const logs = createEngine({ configVersion: 1 }, { packs: [corePack] });
+const { value, map } = maskJson(logs, { user: { email: "an@example.vn" }, note: "mail an@example.vn" });
+// { user: { email: "⟦EMAIL_ADDRESS_1⟧" }, note: "mail ⟦EMAIL_ADDRESS_1⟧" }
+restoreJson(logs, value, map); // the original value
+```
+
+[`examples/sentry`](examples/sentry) uses it as a Sentry `beforeSend` hook;
+every recipe under [`examples/`](examples) is run by the test suite.
+
 ## What works today
 
 Every promise in this README and in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
@@ -123,7 +141,8 @@ full-width, format characters, any script's digits, Cyrillic ↔ Latin, and
 numbers whatever their grouping — `0912345678` finds `0912 345 678`),
 document-wide propagation, typed and
 numbered placeholders, union overlap resolution, strict restore that escapes
-values for HTML or JSON output, pluggable
+values for HTML or JSON output, `maskJson`/`restoreJson` for structured
+data with one map across fields, pluggable
 recognizers and locale packs with locale selection, score thresholds, and
 fail-closed handling of bad config, bad spans, failing recognizers and
 planted placeholders — 100% line and branch coverage, enforced in CI, plus

@@ -16,7 +16,9 @@ import {
   checkExamples,
   ConfigError,
   createEngine,
+  maskJson,
   patternRecognizer,
+  restoreJson,
   RestoreError,
   WithheldError,
   type Recognizer,
@@ -330,5 +332,15 @@ describe("README — the API sketch runs exactly as documented", () => {
     const { text: masked, map } = engine.anonymize(text, findings);
     expect(masked).toBe("Bệnh nhân ⟦PERSON_1⟧, SĐT ⟦PHONE_NUMBER_1⟧. Tái khám: ⟦PERSON_2⟧.");
     expect(engine.restore(masked, map, { strict: true })).toBe(text);
+  });
+
+  it("masks structured data with one map, as the maskJson example shows", async () => {
+    // The README example loads pack-core; a core test imports it only here.
+    const { corePack } = await import("@determask/pack-core");
+    const logs = createEngine({ configVersion: 1 }, { packs: [corePack] });
+    const input = { user: { email: "an@example.vn" }, note: "mail an@example.vn" };
+    const { value, map } = maskJson(logs, input);
+    expect(value).toEqual({ user: { email: "⟦EMAIL_ADDRESS_1⟧" }, note: "mail ⟦EMAIL_ADDRESS_1⟧" });
+    expect(restoreJson(logs, value, map)).toEqual(input);
   });
 });

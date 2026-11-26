@@ -31,3 +31,11 @@ export type {
   Span,
   TextViews,
 } from "./types.js";
+export {
+  maskJson,
+  restoreJson,
+  DEFAULT_MAX_DEPTH,
+  type MaskJsonOptions,
+  type MaskJsonResult,
+  type RestoreJsonOptions,
+} from "./json.js";

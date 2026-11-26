@@ -7,6 +7,7 @@ describe("public API surface", () => {
       [
         "ConfigError",
         "DEFAULT_CONTEXT_BOOST",
+        "DEFAULT_MAX_DEPTH",
         "DEFAULT_THRESHOLD",
         "DEFAULT_WINDOW",
         "KNOWN_VALUES_RECOGNIZER_ID",
@@ -17,9 +18,11 @@ describe("public API surface", () => {
         "foldText",
         "foldValue",
         "hasWordBoundaries",
+        "maskJson",
         "matchKnownValues",
         "parseMarkedExample",
         "patternRecognizer",
+        "restoreJson",
       ].sort(),
     );
   });
