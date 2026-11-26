@@ -29,7 +29,15 @@ The first published version. Every package is new.
   context and before-only anti-context, per-entity thresholds) and
   `checkExamples` for the required examples.
 - Fails closed: `ConfigError`, `WithheldError`, `RestoreError`; a
-  recognizer that throws withholds the text.
+  recognizer that throws withholds the text. The engine refuses to load
+  when `config.locales` names a locale no loaded recognizer serves, or a
+  per-entity threshold names an entity nothing reports (#7).
+- Linear in the length of the text: analyze, anonymize and restore, with
+  a scale gate in CI (#8).
+- A value detected once and vouched for by a validator or context word is
+  masked everywhere in the document (#9).
+- Word boundaries in scripts written without spaces: names glued to
+  particles in Japanese, Korean, Chinese and Thai are masked (#10).
 
 ### Locale packs
 
