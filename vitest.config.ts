@@ -4,12 +4,16 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     // Tests exercise the TypeScript source, so coverage maps to real lines.
-    alias: {
-      "@determask/core": fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
-    },
+    alias: Object.fromEntries(
+      ["core", "pack-core", "pack-vi", "pack-sr", "pack-sg"].map((pkg) => [
+        `@determask/${pkg}`,
+        fileURLToPath(new URL(`./packages/${pkg}/src/index.ts`, import.meta.url)),
+      ]),
+    ),
   },
   test: {
-    include: ["packages/*/test/**/*.test.ts"],
+    // examples/ hold recipes users copy; each one is executed here.
+    include: ["packages/*/test/**/*.test.ts", "examples/**/*.test.ts"],
     coverage: {
       provider: "v8",
       include: ["packages/*/src/**/*.ts"],
