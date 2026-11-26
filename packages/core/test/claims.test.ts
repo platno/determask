@@ -16,6 +16,7 @@ import {
   checkExamples,
   ConfigError,
   createEngine,
+  createStreamRestorer,
   patternRecognizer,
   RestoreError,
   WithheldError,
@@ -330,5 +331,25 @@ describe("README — the API sketch runs exactly as documented", () => {
     const { text: masked, map } = engine.anonymize(text, findings);
     expect(masked).toBe("Bệnh nhân ⟦PERSON_1⟧, SĐT ⟦PHONE_NUMBER_1⟧. Tái khám: ⟦PERSON_2⟧.");
     expect(engine.restore(masked, map, { strict: true })).toBe(text);
+  });
+});
+
+describe("README — streaming restore", () => {
+  it("restores a stream split inside placeholders through the README's TransformStream", async () => {
+    const engine = createEngine({ configVersion: 1 });
+    const text = "Bệnh nhân Nguyễn Văn An, SĐT 0912 345 678.";
+    const { findings } = engine.analyze(text, {
+      knownValues: { PERSON: ["Nguyễn Văn An"], PHONE_NUMBER: ["0912 345 678"] },
+    });
+    const { text: masked, map } = engine.anonymize(text, findings);
+    const restorer = createStreamRestorer(engine, map);
+    const restoring = new TransformStream<string, string>({
+      transform: (chunk, out) => out.enqueue(restorer.push(chunk)),
+      flush: (out) => out.enqueue(restorer.end()),
+    });
+    const chunks = masked.match(/.{1,5}/gsu) as string[]; // every placeholder is split
+    let out = "";
+    for await (const piece of ReadableStream.from(chunks).pipeThrough(restoring)) out += piece;
+    expect(out).toBe(text);
   });
 });
