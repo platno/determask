@@ -244,7 +244,8 @@ describe("checkExamples (D20)", () => {
   it("runs under the recognizer's own locale, or the one given", () => {
     const vi = patternRecognizer(base({ locales: ["vi-VN"] }));
     expect(checkExamples(vi)).toEqual([]);
-    expect(checkExamples(vi, { locale: "sr-RS" })).toHaveLength(1); // not served there
+    // A locale nothing loaded is made for runs every recognizer, so the examples still pass.
+    expect(checkExamples(vi, { locale: "sr-RS" })).toEqual([]);
   });
 
   it("runs under the config given", () => {

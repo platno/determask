@@ -61,6 +61,16 @@ A preset combines them: `vi-VN + clinical` for a hospital note before
 translation, `en-US + logs` for a log pipeline, `sr-RS + support` for a
 helpdesk export.
 
+A locale named in the config must have its pack loaded:
+`locales: { primary: "en-SG" }` with only pack-core refuses to load, rather
+than run while every NRIC passes through. The same goes for a per-entity
+threshold that no loaded recognizer reports. A locale passed to `analyze`
+that no loaded pack is made for counts as unknown, and an unknown locale
+runs every recognizer: `locale: "hr-HR"` with pack-sr loaded still finds a
+JMBG, which Bosnia, Montenegro and North Macedonia use too. Locales match by
+language and region, ignoring case and script (`sr-RS` serves
+`sr-Latn-RS`).
+
 ## Design in one paragraph
 
 An **analyzer** produces spans with scores and a rule trace; an

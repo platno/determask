@@ -107,11 +107,13 @@ describe("README — design paragraph", () => {
   it.todo("R10 built-in patterns are ReDoS-safe: static lint plus the n-vs-4n timing gate on real patterns (M1)");
   it.todo("R11 user-supplied patterns run on a linear-time engine (re2js) (M1)");
 
-  it("R12 locale packs plug in and serve only their locales", () => {
+  it("R12 locale packs plug in and serve only their locales — and a locale none is made for runs them all", () => {
     const vi: Recognizer = { id: "vi.x", entities: ["X"], locales: ["vi-VN"], analyze: () => [{ entity: "X", start: 0, end: 1, score: 1, recognizer: "vi.x", trace: [] }] };
-    const engine = createEngine(config, { packs: [{ id: "pack-test", locales: ["vi-VN"], recognizers: [vi] }] });
+    const sr: Recognizer = { id: "sr.y", entities: ["Y"], locales: ["sr-RS"], analyze: () => [] };
+    const engine = createEngine(config, { packs: [{ id: "pack-test", locales: ["vi-VN"], recognizers: [vi] }], recognizers: [sr] });
     expect(engine.analyze("x", { locale: "vi-VN" }).findings).toHaveLength(1);
     expect(engine.analyze("x", { locale: "sr-RS" }).findings).toHaveLength(0);
+    expect(engine.analyze("x", { locale: "hr-HR" }).findings).toHaveLength(1); // unknown: never drop recall
   });
   it.todo("R12 every locale pack ships recognizers whose embedded examples pass — pack-core, pack-vi, pack-sr, pack-sg one PR each; en-US M4");
 
@@ -235,6 +237,11 @@ describe("ARCHITECTURE — decisions", () => {
   it("D15 locale precedence: an unknown locale runs every recognizer rather than dropping recall", () => {
     const sr: Recognizer = { id: "sr.x", entities: ["X"], locales: ["sr-RS"], analyze: () => [{ entity: "X", start: 0, end: 1, score: 1, recognizer: "sr.x", trace: [] }] };
     expect(createEngine(config, { recognizers: [sr] }).analyze("x").findings).toHaveLength(1);
+  });
+  it("D15/D14 a locale or entity the config declares, but nothing loaded serves, refuses to load", () => {
+    const core: Recognizer = { id: "core.x", entities: ["X"], locales: ["*"], analyze: () => [] };
+    expect(() => createEngine({ configVersion: 1, locales: { primary: "en-SG" } }, { recognizers: [core] })).toThrow(ConfigError);
+    expect(() => createEngine({ configVersion: 1, thresholds: { perEntity: { SG_NRIC_FIN: 0.6 } } }, { recognizers: [core] })).toThrow(ConfigError);
   });
   it.todo("D16 data packs versioned separately with valid_from/valid_to and provenance (M7)");
 

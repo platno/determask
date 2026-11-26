@@ -158,16 +158,32 @@ function collectRecognizers(options: EngineOptions): Recognizer[] {
   return all;
 }
 
+/** A BCP 47 tag compared case-insensitively and without its script: "sr-Latn-RS" → "sr-rs". */
+const localeKey = (tag: string): string =>
+  tag
+    .toLowerCase()
+    .split("-")
+    .filter((part, i) => !(i > 0 && /^[a-z]{4}$/u.test(part)))
+    .join("-");
+
 /**
- * Which recognizers serve a locale (D15/F15). "*" serves every locale; a
- * tag matches exactly or by primary language ("vi" serves "vi-VN"). With
- * no locale known, EVERY recognizer runs: an unknown locale must cost
- * over-masking, never silently dropped recall.
+ * Is `r` made for `locale` — not merely locale-independent ("*")? A tag
+ * matches exactly or by primary language ("vi" serves "vi-VN"), ignoring
+ * case and script ("sr-RS" serves "sr-Latn-RS").
+ */
+function madeFor(r: Recognizer, locale: string): boolean {
+  const key = localeKey(locale);
+  const lang = key.split("-")[0];
+  return r.locales.some((l) => l !== "*" && (localeKey(l) === key || localeKey(l) === lang));
+}
+
+/**
+ * Which recognizers serve a locale (D15/F15): those made for it, plus the
+ * locale-independent ones. With no locale known, EVERY recognizer runs: an
+ * unknown locale must cost over-masking, never silently dropped recall.
  */
 function servesLocale(r: Recognizer, locale: string | undefined): boolean {
-  if (locale === undefined) return true;
-  const lang = locale.split("-")[0];
-  return r.locales.some((l) => l === "*" || l === locale || l === lang);
+  return locale === undefined || r.locales.includes("*") || madeFor(r, locale);
 }
 
 /** Deterministic tie-break (D10): score, then length, then start, then entity. */
@@ -248,16 +264,48 @@ function snapToCodePoints(span: Span, text: string): Span {
   return start === span.start && end === span.end ? span : { ...span, start, end };
 }
 
+/**
+ * Fail closed on configuration that promises coverage nothing delivers
+ * (D14/D20). A locale named in `config.locales` must be served by at least
+ * one recognizer made for it — "*" recognizers do not count, or
+ * `primary: "en-SG"` with only pack-core loaded would run without error and
+ * pass every NRIC through. A per-entity threshold must name an entity some
+ * loaded recognizer reports, or it guards nothing. (NVIDIA NeMo Guardrails
+ * #2643 is this bug in another tool.)
+ */
+function assertDeclaredCoverage(config: EngineConfig, recognizers: readonly Recognizer[]): void {
+  const declared = config.locales === undefined ? [] : [config.locales.primary, ...(config.locales.also ?? [])];
+  for (const locale of declared) {
+    if (!recognizers.some((r) => madeFor(r, locale))) {
+      throw new ConfigError(
+        `no loaded recognizer serves locale ${JSON.stringify(locale)}: load its pack, or remove it from config.locales`,
+      );
+    }
+  }
+  for (const entity of Object.keys(config.thresholds?.perEntity ?? {})) {
+    if (!recognizers.some((r) => r.entities.includes(entity))) {
+      throw new ConfigError(
+        `config.thresholds.perEntity names ${entity}, which no loaded recognizer reports: load its pack, or remove the threshold`,
+      );
+    }
+  }
+}
+
 export function createEngine(config: EngineConfig, options: EngineOptions = {}): Engine {
   validateConfig(config);
   const recognizers = collectRecognizers(options);
+  assertDeclaredCoverage(config, recognizers);
   const defaultThreshold = config.thresholds?.default ?? DEFAULT_THRESHOLD;
   const perEntity = config.thresholds?.perEntity ?? {};
   const threshold = (entity: string): number =>
     Object.hasOwn(perEntity, entity) ? (perEntity[entity] as number) : defaultThreshold;
 
   function analyze(text: string, analyzeOptions: AnalyzeOptions = {}): AnalyzeResult {
-    const locale = analyzeOptions.locale ?? config.locales?.primary;
+    const requested = analyzeOptions.locale ?? config.locales?.primary;
+    // A locale no loaded recognizer is made for is an unknown locale, and an
+    // unknown locale runs every recognizer: "hr-HR" with only pack-sr loaded
+    // must still find a JMBG, not silently run the generic recognizers alone.
+    const locale = requested !== undefined && recognizers.some((r) => madeFor(r, requested)) ? requested : undefined;
     const views: TextViews = { original: text, folded: foldText(text) };
     const findings: Span[] = [];
 
@@ -269,7 +317,7 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
     }
 
     const ctx: AnalyzeContext = {
-      locale: locale ?? "und",
+      locale: requested ?? "und",
       ...(analyzeOptions.knownValues !== undefined ? { knownValues: analyzeOptions.knownValues } : {}),
       ...(analyzeOptions.documentId !== undefined ? { documentId: analyzeOptions.documentId } : {}),
     };

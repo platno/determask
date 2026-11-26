@@ -29,8 +29,10 @@ describe("@determask/pack-vi — pack contract", () => {
     });
   }
 
-  it("does not run for another locale", () => {
-    expect(engine.analyze("CCCD 001099012345", { locale: "sr-RS" }).findings).toEqual([]);
+  it("does not run for a locale another loaded pack is made for", () => {
+    const withSr = createEngine({ configVersion: 1 }, { packs: [viPack], recognizers: [{ id: "t.other", entities: ["OTHER"], locales: ["sr-RS"], analyze: () => [] }] });
+    expect(withSr.analyze("CCCD 001099012345", { locale: "sr-RS" }).findings).toEqual([]);
+    expect(engine.analyze("CCCD 001099012345", { locale: "vi" }).findings).toHaveLength(1);
   });
 });
 
