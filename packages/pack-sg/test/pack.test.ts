@@ -23,6 +23,12 @@ describe("@determask/pack-sg — pack contract", () => {
   }
 });
 
+describe("the label nearest the value decides", () => {
+  it("masks a phone whose own label is nearer than an earlier anti-context word", () => {
+    expect(found("Invoice sent to the patient, HP 9123 4567")).toEqual(["PHONE_NUMBER:9123 4567"]);
+  });
+});
+
 describe("end to end: a synthetic clinic record", () => {
   const record =
     "Patient Tan Wei Ling, NRIC S1234567D, HP 9123 4567, " +
@@ -88,11 +94,5 @@ describe("isPostalCode — sectors 01–82", () => {
 
   it("rejects sector 00, sectors above 82, and malformed input", () => {
     for (const s of ["001234", "831234", "991234", "12345", "1234567", "12345a"]) expect(isPostalCode(s), s).toBe(false);
-  });
-});
-
-describe("the label nearest the value decides", () => {
-  it("masks a phone whose own label is nearer than an earlier anti-context word", () => {
-    expect(found("Invoice sent to the patient, HP 9123 4567")).toEqual(["PHONE_NUMBER:9123 4567"]);
   });
 });
