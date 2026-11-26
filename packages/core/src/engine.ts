@@ -321,7 +321,7 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
     const map: Record<string, string> = {};
     const counts: Record<string, number> = {};
 
-    // Number left to right, so the first mention is _1 ...
+    // Number left to right, so the first mention is _1.
     const tokens = resolved.map((span) => {
       const value = text.slice(span.start, span.end);
       const valueKey = `${span.entity}\u0000${value}`;
@@ -337,14 +337,17 @@ export function createEngine(config: EngineConfig, options: EngineOptions = {}):
       return token;
     });
 
-    // ... and replace right to left, so earlier offsets stay valid.
-    let out = text;
-    for (let i = resolved.length - 1; i >= 0; i--) {
-      const span = resolved[i] as Span;
-      out = out.slice(0, span.start) + (tokens[i] as string) + out.slice(span.end);
-    }
+    // One pass over the text: slicing a rebuilt string once per span would be
+    // quadratic in the text length.
+    const parts: string[] = [];
+    let at = 0;
+    resolved.forEach((span, i) => {
+      parts.push(text.slice(at, span.start), tokens[i] as string);
+      at = span.end;
+    });
+    parts.push(text.slice(at));
 
-    return { text: out, map, report: { counts } };
+    return { text: parts.join(""), map, report: { counts } };
   }
 
   function restore(

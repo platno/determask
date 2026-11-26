@@ -63,6 +63,9 @@ function asciiDigit(ch: string): string {
 
 export function foldText(original: string): FoldedView {
   let out = "";
+  // Never read `out` while building it: out.endsWith() flattens V8's rope
+  // string on every call, which made folding quadratic in the text length.
+  let lastWasSpace = false;
   const starts: number[] = [];
   const ends: number[] = [];
 
@@ -91,10 +94,12 @@ export function foldText(original: string): FoldedView {
       const unit = folded[k] as string;
       if (WHITESPACE.test(unit)) {
         // Collapse whitespace runs to one space.
-        if (out.endsWith(" ")) continue;
+        if (lastWasSpace) continue;
         out += " ";
+        lastWasSpace = true;
       } else {
         out += unit;
+        lastWasSpace = false;
       }
       starts.push(i);
       ends.push(i + cpLen);

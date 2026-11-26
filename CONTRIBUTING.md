@@ -35,6 +35,9 @@ Changes must not break these; CI enforces most of them:
   validator name is a config-load error.
 - **No ReDoS by construction.** Built-in patterns pass static linting and
   the n-vs-4n timing gate. User-supplied patterns run on re2js only.
+- **Linear in the text length.** The whole engine passes the n-vs-4n scale
+  gate (`pnpm lint:scale`); never read or re-slice a string you are
+  building inside a loop over the text.
 - **Deterministic.** Same input + config + key ⇒ same output, on Node,
   Bun and browsers. No `Intl.Segmenter` in the core path, no network
   calls, no ML in this repository.
@@ -51,7 +54,7 @@ Changes must not break these; CI enforces most of them:
 
 ```sh
 pnpm install
-pnpm check     # build, typecheck (packages + tests), tests at 100% coverage, smoke, ReDoS lint
+pnpm check     # build, typecheck (packages + tests), tests at 100% coverage, smoke, ReDoS and scale gates
 pnpm claims    # what is built and what is still only promised, claim by claim
 ```
 
