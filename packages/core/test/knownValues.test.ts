@@ -6,6 +6,28 @@ const views = (original: string): TextViews => ({ original, folded: foldText(ori
 const surfaces = (text: string, values: Record<string, string[]>): string[] =>
   matchKnownValues(views(text), values).map((s) => text.slice(s.start, s.end));
 
+describe("matchKnownValues — spellings without a diacritic or as two letters (EMEA round 3)", () => {
+  it("matches ß and ss, Turkish ı and i, ø, ł and þ either way", () => {
+    expect(surfaces("Adresse: Hauptstrasse 15", { ADDRESS: ["Hauptstraße 15"] })).toEqual(["Hauptstrasse 15"]);
+    expect(surfaces("HAUPTSTRAẞE 15", { ADDRESS: ["Hauptstrasse 15"] })).toEqual(["HAUPTSTRAẞE 15"]);
+    expect(surfaces("Hasta: ISIL YILMAZ", { PERSON: ["Işıl Yılmaz"] })).toEqual(["ISIL YILMAZ"]);
+    expect(surfaces("Soren Lukasz Thor", { PERSON: ["Søren", "Łukasz", "Þór"] })).toEqual(["Soren", "Lukasz", "Thor"]);
+  });
+
+  it("matches Greek capitals with a final sigma, and Arabic spelling variants", () => {
+    expect(surfaces("ΟΔΥΣΣΕΑΣ", { PERSON: ["Οδυσσέας"] })).toEqual(["ΟΔΥΣΣΕΑΣ"]);
+    expect(surfaces("المريض محـــمد", { PERSON: ["محمد"] })).toEqual(["محـــمد"]);
+    expect(surfaces("فاطمه و مصطفي", { PERSON: ["فاطمة", "مصطفى"] })).toEqual(["فاطمه", "مصطفي"]);
+  });
+
+  it("matches a number grouped with en or em dashes", () => {
+    expect(surfaces("SĐT 0912–345–678, fax 0912—345—679", { PHONE_NUMBER: ["0912345678", "0912 345 679"] })).toEqual([
+      "0912–345–678",
+      "0912—345—679",
+    ]);
+  });
+});
+
 describe("matchKnownValues (D11)", () => {
   it("matches case-, accent- and whitespace-insensitively", () => {
     const text = "BN NGUYEN  VAN AN; nguyễn văn an; Nguyen​Van An";

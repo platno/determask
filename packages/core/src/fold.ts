@@ -7,7 +7,13 @@
  *     LRM/RLM, BOM) become a space, so they cannot dodge detection;
  *   - lower-case, then NFKD (folds full-width forms), then combining
  *     marks are stripped;
- *   - đ/Đ are special-cased to "d" (no canonical decomposition);
+ *   - đ/Đ are special-cased to "d" (no canonical decomposition), and so
+ *     are the other letters people write without their diacritic or as
+ *     two letters: ß→ss, Turkish ı→i, ø→o, ł→l, þ→th, æ→ae, œ→oe, Greek
+ *     final ς→σ, Arabic taa marbuta ة→ه and alef maksura ى→ي; the Arabic
+ *     tatweel (ـ, a stretching stroke) folds to nothing;
+ *   - every dash (hyphen, en and em dash, minus sign …) becomes "-", so a
+ *     number typed "0912–345–678" is grouped like "0912-345-678";
  *   - every Unicode decimal digit (Arabic-Indic, Persian, Devanagari, Thai,
  *     …) becomes its ASCII digit, so a number cannot dodge detection by
  *     script (Presidio #2378 is this bug);
@@ -40,6 +46,15 @@ const CYRILLIC: Readonly<Record<string, string>> = {
   ы: "y", э: "e", ю: "ju", я: "ja", щ: "sc", ъ: "", ь: "", є: "je", і: "i", ґ: "g", ѕ: "dz",
 };
 const CYRILLIC_LETTER = /[\u0400-\u04ff]/gu;
+
+/** Letters with no decomposition that are matched by their plain form. */
+const PLAIN: Readonly<Record<string, string>> = {
+  ß: "ss", ı: "i", ø: "o", ł: "l", þ: "th", æ: "ae", œ: "oe", ς: "σ", ة: "ه", ى: "ي", ـ: "",
+  "\u2010": "-", "\u2012": "-", "\u2013": "-", "\u2014": "-", "\u2015": "-", "\u2212": "-",
+  "\u2e3a": "-", "\u2e3b": "-",
+};
+// NFKD has already turned U+2011, U+FE58, U+FE63 and U+FF0D into one of these.
+const PLAIN_LETTER = /[ßıøłþæœςةىـ\u2010\u2012-\u2015\u2212\u2e3a\u2e3b]/gu;
 
 const digitValues = new Map<number, string>();
 
@@ -82,7 +97,8 @@ export function foldText(original: string): FoldedView {
         .replace(MARKS, "")
         .replaceAll("đ", "d") // đ (from đ or lower-cased Đ)
         .replace(NON_ASCII_DIGIT, asciiDigit)
-        .replace(CYRILLIC_LETTER, (c) => CYRILLIC[c] ?? c);
+        .replace(CYRILLIC_LETTER, (c) => CYRILLIC[c] ?? c)
+        .replace(PLAIN_LETTER, (c) => PLAIN[c] as string);
     }
 
     // Iterate UTF-16 units so `starts`/`ends` stay aligned with `out`

@@ -131,3 +131,9 @@ describe("isMst — mod-11, weights 31 29 23 19 17 13 7 5 3", () => {
     expect(isMst("01001091a6")).toBe(false);
   });
 });
+
+describe("numbers grouped with en or em dashes", () => {
+  it("finds a phone typed with en dashes", () => {
+    expect(found("SĐT 0912–345–678")).toEqual(["PHONE_NUMBER:0912–345–678"]);
+  });
+});

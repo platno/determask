@@ -25,6 +25,31 @@ describe("foldText — the matching view (D4)", () => {
     expect(foldText("Nguyễn Văn Ấn Ộ").text).toBe("nguyen van an o");
   });
 
+  it("folds letters that have no decomposition to the plain form people type", () => {
+    expect(foldText("Hauptstraße ẞ").text).toBe("hauptstrasse ss");
+    expect(foldText("Işıl İnan").text).toBe("isil inan");
+    expect(foldText("Søren Łukasz Þór Æsa Œuvre").text).toBe("soren lukasz thor aesa oeuvre");
+    expect(foldText("ΟΔΥΣΣΕΑΣ Οδυσσέας").text).toBe("οδυσσεασ οδυσσεασ");
+    expect(foldText("فاطمة مصطفى").text).toBe("فاطمه مصطفي");
+  });
+
+  it("turns every dash into a hyphen-minus", () => {
+    expect(foldText("0912–345—678 ‐ ‑ ‒ ― − ﹘ ﹣ － ⸺ ⸻").text).toBe("0912-345-678 - - - - - - - - - -");
+  });
+
+  it("drops the Arabic tatweel, mapping the rest back to the original", () => {
+    const view = foldText("محـــمد");
+    expect(view.text).toBe("محمد");
+    expect(view.starts).toEqual([0, 1, 5, 6]); // the three tatweels (1..4) left no units
+  });
+
+  it("maps a letter that folds to two back to the one it came from", () => {
+    const view = foldText("aß");
+    expect(view.text).toBe("ass");
+    expect(view.starts).toEqual([0, 1, 1]);
+    expect(view.ends).toEqual([1, 2, 2]);
+  });
+
   it("folds đ and Đ to d — they have no canonical decomposition", () => {
     expect(foldText("Đức đi").text).toBe("duc di");
   });

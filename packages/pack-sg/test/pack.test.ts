@@ -90,3 +90,9 @@ describe("isPostalCode — sectors 01–82", () => {
     for (const s of ["001234", "831234", "991234", "12345", "1234567", "12345a"]) expect(isPostalCode(s), s).toBe(false);
   });
 });
+
+describe("numbers grouped with en or em dashes", () => {
+  it("finds a phone typed with an en dash", () => {
+    expect(found("HP 9123–4567")).toEqual(["PHONE_NUMBER:9123–4567"]);
+  });
+});
