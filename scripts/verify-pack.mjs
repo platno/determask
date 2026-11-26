@@ -12,13 +12,14 @@
  *     repository directory (npm provenance needs it) and provenance on;
  *   - every source a shipped `.map` file names is in the tarball.
  * Then it extracts the tarballs into an empty project's node_modules — no
- * workspace links — and runs the smoke test and a check of every pack
- * against them, imported by package name, as a user would.
+ * workspace links — and runs the smoke test, a sentence through four packs,
+ * and every packed pack's own recognizer examples, all imported by package
+ * name, as a user would.
  *
  * Run after `pnpm build`. Offline: nothing is fetched or published.
  */
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,7 +43,10 @@ try {
   mkdirSync(tarballs);
   mkdirSync(join(project, "node_modules", "@determask"), { recursive: true });
 
-  const packages = readdirSync(packagesDir).sort();
+  // A folder without a manifest (build output left by another branch) is not a package.
+  const packages = readdirSync(packagesDir)
+    .filter((dir) => existsSync(join(packagesDir, dir, "package.json")))
+    .sort();
   const versions = new Set();
   for (const dir of packages) {
     const manifest = JSON.parse(readFileSync(join(packagesDir, dir, "package.json"), "utf8"));
@@ -51,6 +55,7 @@ try {
   }
   if (versions.size !== 1) fail(`packages disagree on the version: ${[...versions].join(", ")}`);
   const [version] = versions;
+  const packNames = [];
 
   for (const file of readdirSync(tarballs).sort()) {
     const tgz = join(tarballs, file);
@@ -92,6 +97,7 @@ try {
     }
 
     cpSync(pkgRoot, join(project, "node_modules", ...name.split("/")), { recursive: true });
+    if (name.startsWith("@determask/pack-")) packNames.push(name);
     console.log(`  ${name}@${manifest.version}: ${files.length} files`);
   }
 
@@ -113,7 +119,20 @@ const { findings } = engine.analyze(text);
 const out = engine.anonymize(text, findings).text;
 const want = "⟦EMAIL_ADDRESS_1⟧ CCCD ⟦VN_PERSONAL_ID_1⟧ JMBG ⟦RS_PERSONAL_ID_1⟧ NRIC ⟦SG_NRIC_FIN_1⟧";
 if (out !== want) { console.error("FAIL packs by name\\n  expected " + want + "\\n  actual   " + out); process.exit(1); }
-console.log("packs: OK by package name");
+
+// Every packed pack, imported by name, passes its recognizers' own examples.
+import { checkExamples } from "@determask/core";
+for (const name of ${JSON.stringify(packNames)}) {
+  const packs = Object.values(await import(name)).filter((v) => v && typeof v === "object" && Array.isArray(v.recognizers));
+  if (packs.length === 0) { console.error("FAIL " + name + " exports no pack"); process.exit(1); }
+  for (const pack of packs) {
+    for (const r of pack.recognizers) {
+      const failures = checkExamples(r);
+      if (failures.length > 0) { console.error("FAIL " + name + " " + r.id + ": " + JSON.stringify(failures)); process.exit(1); }
+    }
+  }
+}
+console.log("packs: OK by package name, " + ${JSON.stringify(packNames)}.length + " packs' examples pass");
 `,
   );
   writeFileSync(join(project, "package.json"), JSON.stringify({ name: "verify", private: true, type: "module" }));

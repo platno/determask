@@ -59,6 +59,8 @@ The first published version. Every package is new.
 - `@determask/pack-sr`: JMBG, PIB, bank account (MOD 97), LBO, phones.
 - `@determask/pack-sg`: NRIC/FIN (an unverified check letter is still
   masked), postal codes, phones, passports.
+- `@determask/pack-my`: MyKad (date of birth and JPN place-of-birth codes;
+  an unlisted code is still masked), phones, passports (#16).
 
 ### Not in this version
 
