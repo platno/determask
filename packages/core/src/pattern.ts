@@ -124,6 +124,22 @@ function rangeAfter(folded: string, end: number, window: number): [number, numbe
   return [end, limit];
 }
 
+/**
+ * Where the last whole-word `word` in folded[from, to) ends, or -1. Only
+ * the window is searched, so the cost does not grow with the document.
+ */
+function lastWordEnd(folded: string, from: number, to: number, word: string): number {
+  const window = folded.slice(from, to);
+  for (let at = window.lastIndexOf(word); at !== -1; at = at === 0 ? -1 : window.lastIndexOf(word, at - 1)) {
+    if (hasWordBoundaries(folded, from + at, from + at + word.length)) return from + at + word.length;
+  }
+  return -1;
+}
+
+/** The end of the occurrence nearest the window's end, over all `words`, or -1. */
+const nearest = (folded: string, from: number, to: number, words: readonly string[]): number =>
+  words.reduce((best, w) => Math.max(best, lastWordEnd(folded, from, to, w)), -1);
+
 export function patternRecognizer(spec: PatternRecognizerSpec): Recognizer {
   if (spec.patterns.length === 0) throw new ConfigError(`${spec.id}: no patterns`);
   if (spec.examples.match.length === 0 || spec.examples.noMatch.length === 0) {
@@ -191,9 +207,12 @@ export function patternRecognizer(spec: PatternRecognizerSpec): Recognizer {
           }
         }
 
+        // Anti-context rejects only when it is the nearest label before the
+        // value: in "Invoice sent to the patient, HP 9123 4567" the phone's
+        // own label is closer, and the phone is masked.
         const [bFrom, bTo] = rangeBefore(folded, fs, window);
-        const rejectedBy = anti.find((w) => hasWord(folded, bFrom, bTo, w));
-        if (rejectedBy !== undefined) continue;
+        const antiAt = nearest(folded, bFrom, bTo, anti);
+        if (antiAt !== -1 && antiAt > nearest(folded, bFrom, bTo, context)) continue;
 
         const [aFrom, aTo] = rangeAfter(folded, fe, window);
         const hint = context.find((w) => hasWord(folded, bFrom, bTo, w) || hasWord(folded, aFrom, aTo, w));

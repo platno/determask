@@ -36,9 +36,12 @@ pattern score  →  validator (gate, may regrade)  →  context boost  →  thre
    to reject the candidate, `true` to keep its score, or
    `{ score, attrs, note }` to regrade it — a checksum that passes usually
    raises the score, a structure that is only plausible lowers it.
-3. **Anti-context.** If any `antiContext` word appears *before* the value,
-   the candidate is rejected. Only before: "invoice 0912345678" is not a
-   phone, "0912345678 invoice" might still be.
+3. **Anti-context.** If an `antiContext` word appears *before* the value,
+   and no `context` word stands between it and the value, the candidate is
+   rejected. Only before: "invoice 0912345678" is not a phone, "0912345678
+   invoice" might still be. And only the nearest label counts: in "Invoice
+   sent to the patient, HP 9123 4567" the phone's own label is closer, and
+   the phone is masked.
 4. **Context.** If any `context` word appears before or after the value,
    the score rises by `contextBoost` (default 0.35), capped at 1.
 5. **Threshold.** The engine returns only findings scoring at least the

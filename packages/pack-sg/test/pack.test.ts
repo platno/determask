@@ -90,3 +90,9 @@ describe("isPostalCode — sectors 01–82", () => {
     for (const s of ["001234", "831234", "991234", "12345", "1234567", "12345a"]) expect(isPostalCode(s), s).toBe(false);
   });
 });
+
+describe("the label nearest the value decides", () => {
+  it("masks a phone whose own label is nearer than an earlier anti-context word", () => {
+    expect(found("Invoice sent to the patient, HP 9123 4567")).toEqual(["PHONE_NUMBER:9123 4567"]);
+  });
+});

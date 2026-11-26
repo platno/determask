@@ -57,7 +57,7 @@ The library is built from five proven parts:
 | D5 | Unicode boundaries instead of `\b`, per edge: a letter edge is glued by an adjacent letter, mark or underscore, a digit edge only by an adjacent digit — so a label glued to a number (`CCCD001…`) does not hide it. Built-in patterns pass an n-vs-4n timing gate in a killable process. User patterns run on re2js. |
 | D6 | Dictionaries and known values match via a code-point Aho-Corasick automaton over the folded view (leftmost-longest, boundary-checked). A keyword prefilter picks which context-gated recognizers run. |
 | D7 | Scores in [0,1]: base, then validator, then context boost, then per-entity threshold (default 0.5). DLP-style rule sets apply in declared order, clamped at each step. |
-| D8 | Context matches whole words per language; windows measured in code points after NFC, stopping at the nearest other number; negative words count only *before* the value. |
+| D8 | Context matches whole words per language; windows measured in code points after NFC, stopping at the nearest other number; negative words count only *before* the value, and only when no context word stands between them and the value (the nearest label decides). |
 | D9 | Validators are named pure functions. Unknown name = load error. A validator that **throws counts as a pass** (candidate masked): privacy fails closed. |
 | D10 | Same-type duplicates removed in the analyzer. Cross-type overlaps resolved in the anonymizer, default `union`. Ties: priority, then length, then start, then registry order. |
 | D11 | `knownValues` is first-class per-call input, matched with case/accents/script/whitespace folded, and numbers matched whatever their grouping; anything detected once is masked everywhere in the document. |
