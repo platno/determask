@@ -3,7 +3,7 @@
 Serbian locale pack (`sr-RS`, `sr-Latn-RS`, `sr-Cyrl-RS`): the personal
 identification number, tax and bank account numbers, the health insurance
 number, and phone numbers — in Latin and Cyrillic. Load it with
-[`@determask/pack-core`](../pack-core) for email, URL, IP, card and IBAN.
+[`@determask/pack-core`](https://github.com/platno/determask/tree/main/packages/pack-core) for email, URL, IP, card and IBAN.
 
 ```ts
 import { createEngine } from "@determask/core";

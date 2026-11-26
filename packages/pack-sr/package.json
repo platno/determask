@@ -1,7 +1,7 @@
 {
   "name": "@determask/pack-sr",
-  "version": "0.0.1",
-  "description": "Serbian locale pack for determask: JMBG, LBO, PIB, ID card, phones, names, addresses, plates.",
+  "version": "0.1.0-alpha.0",
+  "description": "Serbian locale pack for determask: JMBG, PIB tax number, bank account (MOD 97), LBO health insurance number, phones.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -21,14 +21,18 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "src",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "sideEffects": false,
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --root ../.. packages/pack-sr/"
   },
@@ -36,6 +40,16 @@
     "@determask/core": "workspace:*"
   },
   "publishConfig": {
-    "access": "public"
-  }
+    "access": "public",
+    "provenance": true
+  },
+  "keywords": [
+    "pii",
+    "masking",
+    "redaction",
+    "serbia",
+    "serbian",
+    "jmbg",
+    "determask"
+  ]
 }

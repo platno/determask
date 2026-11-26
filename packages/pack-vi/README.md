@@ -2,7 +2,7 @@
 
 Vietnamese locale pack (`vi-VN`): personal and insurance identifiers, the
 enterprise tax code, and phone numbers. Load it with
-[`@determask/pack-core`](../pack-core) for email, URL, IP, card and IBAN.
+[`@determask/pack-core`](https://github.com/platno/determask/tree/main/packages/pack-core) for email, URL, IP, card and IBAN.
 
 ```ts
 import { createEngine } from "@determask/core";

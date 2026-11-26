@@ -1,7 +1,7 @@
 # @determask/pack-sg
 
 Singapore locale pack (`en-SG`): NRIC/FIN, postal codes, phone numbers and
-passports. Load it with [`@determask/pack-core`](../pack-core) for email,
+passports. Load it with [`@determask/pack-core`](https://github.com/platno/determask/tree/main/packages/pack-core) for email,
 URL, IP, card and IBAN.
 
 ```ts
