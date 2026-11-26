@@ -62,6 +62,11 @@ describe("identifiers glued to labels, and in other scripts' digits", () => {
     expect(found("IP203.0.113.42")).toEqual(["IP_ADDRESS:203.0.113.42"]);
   });
 
+  it("finds an email or URL glued to Japanese or Chinese text", () => {
+    expect(found("連絡先はtaro@example.comです")).toEqual(["EMAIL_ADDRESS:taro@example.com"]);
+    expect(found("详情见https://example.com/a 页面")).toEqual(["URL:https://example.com/a"]);
+  });
+
   it("finds a card written in Arabic-Indic or Devanagari digits", () => {
     expect(found("بطاقة ٤١١١١١١١١١١١١١١١")).toEqual(["CREDIT_CARD:٤١١١١١١١١١١١١١١١"]);
     expect(found("कार्ड ४१११ ११११ ११११ ११११")).toEqual(["CREDIT_CARD:४१११ ११११ ११११ ११११"]);

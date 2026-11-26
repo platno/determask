@@ -91,4 +91,25 @@ describe("matchKnownValues (D11)", () => {
     expect(surfaces("aaa", { PERSON: ["aa"] })).toEqual([]);
     expect(surfaces("aa aa", { PERSON: ["aa"] })).toEqual(["aa", "aa"]);
   });
+
+  describe("in scripts written without spaces", () => {
+    it("matches a Japanese name glued to its honorific and particle", () => {
+      expect(surfaces("田中太郎さんは本日来院。田中太郎の電話", { PERSON: ["田中太郎"] })).toEqual(["田中太郎", "田中太郎"]);
+    });
+
+    it("matches a Korean name glued to its particle, but not as part of another name", () => {
+      expect(surfaces("김민수님이 왔다. 김민수의 번호", { PERSON: ["김민수"] })).toEqual(["김민수", "김민수"]);
+      expect(surfaces("김민숙님이 왔다", { PERSON: ["김민수"] })).toEqual([]);
+    });
+
+    it("matches a Chinese or Thai name inside an unspaced sentence", () => {
+      expect(surfaces("患者张伟今天来院，张伟的身份证", { PERSON: ["张伟"] })).toEqual(["张伟", "张伟"]);
+      expect(surfaces("คุณสมชายมาโรงพยาบาล", { PERSON: ["สมชาย"] })).toEqual(["สมชาย"]);
+    });
+
+    it("matches a Latin name glued to Chinese, and still not inside a Latin word", () => {
+      expect(surfaces("Anna的电话", { PERSON: ["Anna"] })).toEqual(["Anna"]);
+      expect(surfaces("Banana and Ana", { PERSON: ["Ana"] })).toEqual(["Ana"]);
+    });
+  });
 });

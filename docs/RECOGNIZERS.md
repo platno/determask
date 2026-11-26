@@ -61,7 +61,12 @@ high score and is masked anywhere (F1, F2).
   edge: a letter edge is glued by an adjacent letter, mark or underscore; a
   digit edge only by an adjacent digit. So a letter–digit transition is a
   boundary, and `CCCD001099012345` or `SĐT0912345678` is found — labels
-  glued to numbers are common in hand-typed records.
+  glued to numbers are common in hand-typed records. Scripts written
+  without spaces (Han, Hiragana, Katakana, Hangul, Thai, Lao, Khmer,
+  Myanmar) never glue: `田中太郎さんは`, `김민수님이`, `患者张伟今天` and
+  `連絡先はtaro@example.comです` all have a boundary at the name or email.
+  A match never splits a Hangul syllable, so `김민수` is not found inside
+  `김민숙`.
 - **Every Unicode decimal digit is ASCII in the folded view** (Arabic-Indic,
   Persian, Devanagari, Thai, …), and **Cyrillic is Latin** (Serbian standard:
   `ђ→d`, `ћ`/`ч→c`, `ж→z`, `ш→s`, `џ→dz`, `љ→lj`, `њ→nj`). A pattern

@@ -49,11 +49,20 @@ check("README mask", masked, "Bệnh nhân ⟦PERSON_1⟧, SĐT ⟦PHONE_NUMBER_
 check("README restore", engine.restore(masked, map, { strict: true }), text);
 
 // Unicode behaviour that differs between engines when it is done wrong.
-const sr = "Đorđe Šćekić, 😀 ０９１２, 𠀀Hoa";
+// 𐐀 is an astral Deseret letter, so "Hoa" glued to it is not a whole word.
+const sr = "Đorđe Šćekić, 😀 ０９１２, 𐐀Hoa";
 const srOut = engine.anonymize(sr, engine.analyze(sr, {
   knownValues: { PERSON: ["Dorde Scekic", "Hoa"], PHONE_NUMBER: ["0912"] },
 }).findings).text;
-check("Unicode folding and boundaries", srOut, "⟦PERSON_1⟧, 😀 ⟦PHONE_NUMBER_1⟧, 𠀀Hoa");
+check("Unicode folding and boundaries", srOut, "⟦PERSON_1⟧, 😀 ⟦PHONE_NUMBER_1⟧, 𐐀Hoa");
+
+// Scripts written without spaces: a name glued to a particle or honorific,
+// and a Hangul syllable never split.
+const cjk = "田中太郎さんは𠀀Hoa。김민수님이, 김민숙님이";
+const cjkOut = engine.anonymize(cjk, engine.analyze(cjk, {
+  knownValues: { PERSON: ["田中太郎", "Hoa", "김민수"] },
+}).findings).text;
+check("Unspaced scripts", cjkOut, "⟦PERSON_1⟧さんは𠀀⟦PERSON_2⟧。⟦PERSON_3⟧님이, 김민숙님이");
 
 // Script folding: other scripts' digits, Cyrillic ↔ Latin, numbers by any grouping.
 const mixed = "هاتف ٠٩١٢٣٤٥٦٧٨, Петар Петровић, SĐT0912.345.678";

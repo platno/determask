@@ -168,6 +168,23 @@ describe("ARCHITECTURE — decisions", () => {
     expect(engine.analyze("CCCD001099012345", { knownValues: { VN_PERSONAL_ID: ["001099012345"] } }).findings).toHaveLength(1);
   });
 
+  it("D5/F5 in scripts written without spaces, a known name glued to a particle or honorific is masked, and restored byte for byte", () => {
+    const engine = createEngine(config);
+    const cases: [string, string][] = [
+      ["田中太郎さんは本日来院しました。", "田中太郎"],
+      ["김민수님이 오늘 방문했습니다.", "김민수"],
+      ["患者张伟今天来院。", "张伟"],
+      ["คุณสมชายมาโรงพยาบาลวันนี้", "สมชาย"],
+    ];
+    for (const [text, name] of cases) {
+      const { findings } = engine.analyze(text, { knownValues: { PERSON: [name] } });
+      const masked = engine.anonymize(text, findings);
+      expect(masked.text, text).not.toContain(name);
+      expect(engine.restore(masked.text, masked.map)).toBe(text);
+    }
+    expect(engine.analyze("Banana", { knownValues: { PERSON: ["Ana"] } }).findings).toEqual([]);
+  });
+
   it.todo("D6 dictionaries and known values match through a code-point Aho-Corasick automaton (M1)");
   const code = (over: Record<string, unknown> = {}) =>
     patternRecognizer({
