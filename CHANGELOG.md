@@ -42,6 +42,9 @@ The first published version. Every package is new.
   across every field; a tested Sentry `beforeSend` recipe in
   `examples/sentry` (#12).
 - A pattern that matches the empty string is refused at construction (#13).
+- `createStreamRestorer` restores a streamed LLM or MT response chunk by
+  chunk, holding back a split placeholder and throwing if the stream ends
+  inside one (#14).
 
 ### Locale packs
 
