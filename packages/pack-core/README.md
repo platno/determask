@@ -14,7 +14,7 @@ const engine = createEngine({ configVersion: 1 }, { packs: [corePack] });
 
 | Entity | Recognizer | How | Masked without context? |
 |---|---|---|---|
-| `EMAIL_ADDRESS` | `core.email` | local part, `@`, dotted domain with an alphabetic TLD | yes (0.9) |
+| `EMAIL_ADDRESS` | `core.email` | local part (plain, or quoted as in `"john smith"@…`), `@`, dotted domain with an alphabetic TLD | yes (0.9) |
 | `URL` | `core.url` | `http(s)://`, `ftp://` or `www.`; trailing punctuation excluded | yes (0.6) |
 | `IP_ADDRESS` | `core.ipv4`, `core.ipv6` | IPv4 octets 0–255; IPv6 full or `::`-compressed | yes (0.6) |
 | `CREDIT_CARD` | `core.credit-card` | 13–19 digits, contiguous or 4-4-4-4 / 4-6-5 / 4-6-4 with one consistent separator; Luhn + issuer range | yes with a known issuer (1.0); otherwise only with context |
