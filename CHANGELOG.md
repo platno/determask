@@ -31,7 +31,9 @@ The first published version. Every package is new.
 - Fails closed: `ConfigError`, `WithheldError`, `RestoreError`; a
   recognizer that throws withholds the text. The engine refuses to load
   when `config.locales` names a locale no loaded recognizer serves, or a
-  per-entity threshold names an entity nothing reports (#7).
+  per-entity threshold names an entity nothing reports; a locale passed to
+  `analyze` that no loaded pack is made for runs every recognizer instead
+  of silently skipping them; locales match ignoring case and script (#7).
 - Linear in the length of the text: analyze, anonymize and restore, with
   a scale gate in CI (#8).
 - A value detected once and vouched for by a validator or context word is
