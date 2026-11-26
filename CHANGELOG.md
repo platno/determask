@@ -47,6 +47,9 @@ The first published version. Every package is new.
 - `createStreamRestorer` restores a streamed LLM or MT response chunk by
   chunk, holding back a split placeholder and throwing if the stream ends
   inside one (#14).
+- Folding maps letters people type without their diacritic: ß→ss,
+  Turkish ı→i, ø, ł, þ, æ, œ, Greek final ς, Arabic ة and ى, and drops
+  the tatweel (#15).
 
 ### Locale packs
 
