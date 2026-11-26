@@ -123,23 +123,44 @@ export function foldValue(value: string): string {
  * A letter–digit transition is therefore a boundary: identifiers are
  * written glued to their labels ("CCCD001099012345", "MST0100109106"),
  * and treating that as one word would leak them.
+ *
+ * Two exceptions for scripts that do not separate words with spaces:
+ *   - next to a Han, Hiragana, Katakana, Hangul, Thai, Lao, Khmer or
+ *     Myanmar letter, a letter edge is never glued: "田中太郎さんは",
+ *     "김민수님이", "患者张伟今天" and "Anna的" have no space to find, and
+ *     requiring one leaked the name. Korean is spaced, but its particles
+ *     and honorifics attach to the noun;
+ *   - folding splits a Hangul syllable into jamo, and a match never ends
+ *     or starts inside a syllable: "김민수" is not a match inside "김민숙".
  */
 export function hasWordBoundaries(folded: string, start: number, end: number): boolean {
   const before = codePointBefore(folded, start);
   const after = codePointFrom(folded, end);
   const first = codePointFrom(folded, start);
   const last = codePointBefore(folded, end);
-  if (before !== undefined && first !== undefined && glued(first, before)) return false;
-  if (after !== undefined && last !== undefined && glued(last, after)) return false;
+  if (before !== undefined && first !== undefined && glued(first, before, before, first)) return false;
+  if (after !== undefined && last !== undefined && glued(last, after, last, after)) return false;
   return true;
 }
 
 const LETTER = /^[\p{L}\p{M}]$/u;
 const NUMBER = /^\p{N}$/u;
+const UNSPACED =
+  /^[\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}\p{scx=Hangul}\p{scx=Thai}\p{scx=Lao}\p{scx=Khmer}\p{scx=Myanmar}]$/u;
+const HANGUL = /^\p{scx=Hangul}$/u;
+/** A Hangul vowel or final-consonant jamo: the inside of a decomposed syllable. */
+const HANGUL_INSIDE = /^[ᅠ-ᇿힰ-퟿]$/u;
 
-/** Does `neighbour` continue the token whose edge character is `edge`? */
-function glued(edge: string, neighbour: string): boolean {
-  if (LETTER.test(edge)) return LETTER.test(neighbour) || neighbour === "_";
+/**
+ * Does `neighbour` continue the token whose edge character is `edge`?
+ * `left` and `right` are the same two characters in text order.
+ */
+function glued(edge: string, neighbour: string, left: string, right: string): boolean {
+  if (HANGUL_INSIDE.test(right) && HANGUL.test(left)) return true;
+  if (LETTER.test(edge)) {
+    if (UNSPACED.test(edge) || UNSPACED.test(neighbour)) return false;
+    return LETTER.test(neighbour) || neighbour === "_";
+  }
   if (NUMBER.test(edge)) return NUMBER.test(neighbour);
   return false;
 }

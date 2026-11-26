@@ -184,9 +184,39 @@ describe("hasWordBoundaries — Unicode-aware (D5/F5)", () => {
   });
 
   it("reads a whole astral letter before the match, not a lone surrogate", () => {
-    // U+20000 (CJK Extension B) is a letter and occupies two UTF-16 units.
-    expect(hasWordBoundaries("𠀀hoa", 2, 5)).toBe(false);
-    expect(hasWordBoundaries("hoa𠀀", 0, 3)).toBe(false);
+    // U+10428 (Deseret, folded) is a letter and occupies two UTF-16 units.
+    expect(hasWordBoundaries("𐐨hoa", 2, 5)).toBe(false);
+    expect(hasWordBoundaries("hoa𐐨", 0, 3)).toBe(false);
+  });
+
+  it("never glues letters in scripts written without spaces (Han, kana, Hangul, Thai …)", () => {
+    expect(hasWordBoundaries("田中太郎さんは", 0, 4)).toBe(true); // name, then an honorific
+    expect(hasWordBoundaries("患者张伟今天", 2, 4)).toBe(true);
+    expect(hasWordBoundaries("カタカナです", 0, 4)).toBe(true);
+    expect(hasWordBoundaries("คุณสมชายมา", 3, 8)).toBe(true);
+    expect(hasWordBoundaries("ສົມມາ", 0, 2)).toBe(true); // Lao
+    expect(hasWordBoundaries("សុខា", 0, 2)).toBe(true); // Khmer
+    expect(hasWordBoundaries("မောင်", 0, 2)).toBe(true); // Myanmar
+    expect(hasWordBoundaries("𠀀hoa", 2, 5)).toBe(true); // an astral Han letter, read whole
+  });
+
+  it("a script change from a spaced to an unspaced script is a boundary", () => {
+    expect(hasWordBoundaries("anna的电话", 0, 4)).toBe(true);
+    expect(hasWordBoundaries("はtaro", 1, 5)).toBe(true);
+  });
+
+  it("never ends or starts a match inside a decomposed Hangul syllable", () => {
+    const kim = "김민수".normalize("NFKD"); // folding decomposes syllables into jamo
+    const kimSuk = "김민숙님".normalize("NFKD");
+    expect(hasWordBoundaries(`${kim}님이`, 0, kim.length)).toBe(true); // a particle follows
+    expect(hasWordBoundaries(kimSuk, 0, kim.length)).toBe(false); // 숙's final consonant follows
+    expect(hasWordBoundaries(kimSuk, 1, kim.length)).toBe(false); // starts after 김's first jamo
+    expect(hasWordBoundaries("abc\u1161", 0, 3)).toBe(true); // a stray vowel jamo after Latin is no syllable
+  });
+
+  it("keeps the letter rule for spaced scripts", () => {
+    expect(hasWordBoundaries("banana", 3, 6)).toBe(false);
+    expect(hasWordBoundaries("petrović", 0, 5)).toBe(false);
   });
 
   it("treats an astral non-letter (emoji) as a boundary", () => {
