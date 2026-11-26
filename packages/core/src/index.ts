@@ -11,6 +11,7 @@ export { checkExamples, parseMarkedExample, type ExampleCheckOptions } from "./e
 export { foldText, foldValue, hasWordBoundaries } from "./fold.js";
 export { matchKnownValues, KNOWN_VALUES_RECOGNIZER_ID } from "./knownValues.js";
 export { ConfigError, RestoreError, WithheldError } from "./errors.js";
+export { createStreamRestorer, STREAM_HOLD_LIMIT, type StreamRestorer } from "./stream.js";
 export type {
   AnalyzeContext,
   AnalyzeOptions,

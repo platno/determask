@@ -14,6 +14,8 @@ describe("public API surface", () => {
         "WithheldError",
         "checkExamples",
         "createEngine",
+        "createStreamRestorer",
+        "STREAM_HOLD_LIMIT",
         "foldText",
         "foldValue",
         "hasWordBoundaries",

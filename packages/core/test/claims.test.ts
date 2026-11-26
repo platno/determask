@@ -22,6 +22,7 @@ import {
   type Recognizer,
   type Span,
 } from "../src/index.js";
+import { createStreamRestorer } from "../src/index.js";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const config = { configVersion: 1 } as const;
@@ -317,6 +318,26 @@ describe("ARCHITECTURE — failures the design must not repeat", () => {
     expect(createEngine(config, { recognizers: [vi] }).analyze("y", { locale: "vi-VN" }).findings).toHaveLength(1);
   });
   it.todo("F16 names need context, known values or adjacent evidence — capitalisation alone never counts (M2)");
+});
+
+describe("README — streaming restore", () => {
+  it("restores a stream split inside placeholders through the README's TransformStream", async () => {
+    const engine = createEngine({ configVersion: 1 });
+    const text = "Bệnh nhân Nguyễn Văn An, SĐT 0912 345 678.";
+    const { findings } = engine.analyze(text, {
+      knownValues: { PERSON: ["Nguyễn Văn An"], PHONE_NUMBER: ["0912 345 678"] },
+    });
+    const { text: masked, map } = engine.anonymize(text, findings);
+    const restorer = createStreamRestorer(engine, map);
+    const restoring = new TransformStream<string, string>({
+      transform: (chunk, out) => out.enqueue(restorer.push(chunk)),
+      flush: (out) => out.enqueue(restorer.end()),
+    });
+    const chunks = masked.match(/.{1,5}/gsu) as string[]; // every placeholder is split
+    let out = "";
+    for await (const piece of ReadableStream.from(chunks).pipeThrough(restoring)) out += piece;
+    expect(out).toBe(text);
+  });
 });
 
 describe("README — the API sketch runs exactly as documented", () => {

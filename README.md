@@ -104,6 +104,19 @@ const { text: masked, map } = engine.anonymize(text, findings);
 engine.restore(masked, map, { strict: true }) === text; // true
 ```
 
+A streamed LLM or MT response is restored as it arrives:
+`createStreamRestorer` emits text as soon as it is safe, holds back a
+fragment that could still become a placeholder (`⟦PERS` … `ON_1⟧`), and
+throws if the stream ends inside one. Wrapped as a `TransformStream`:
+
+```ts
+const restorer = createStreamRestorer(engine, map);
+const restoring = new TransformStream<string, string>({
+  transform: (chunk, out) => out.enqueue(restorer.push(chunk)),
+  flush: (out) => out.enqueue(restorer.end()),
+});
+```
+
 Locale packs and your own recognizers plug in at construction:
 
 ```ts
