@@ -70,6 +70,10 @@ high score and is masked anywhere (F1, F2).
   code units (default 40), and the window **stops at the nearest other
   number**: in "CCCD 001…, SĐT 0912…" the phone does not get the CCCD's
   context.
+- **A pattern that matches the empty string is refused** at construction
+  (`\d*`, `\d{0,12}`, `(?:…)?`): it would match between every two
+  characters. A lookaround that matches zero-length inside text is
+  skipped while scanning, never returned as a span.
 - **A validator that throws counts as a pass** — the candidate is masked at
   full score (D9). Never catch an error in a validator to return `false`.
 - **Examples are required** (D20): at least one `match` example, with the

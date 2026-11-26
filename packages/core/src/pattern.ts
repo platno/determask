@@ -140,11 +140,17 @@ export function patternRecognizer(spec: PatternRecognizerSpec): Recognizer {
 
   const compiled: Compiled[] = spec.patterns.map((def) => {
     assertScore(def.score, `${spec.id} pattern ${def.name}: score`);
+    let re: RegExp;
     try {
-      return { def, re: new RegExp(def.regex, "gu") };
+      re = new RegExp(def.regex, "gu");
     } catch {
       throw new ConfigError(`${spec.id} pattern ${def.name}: invalid regex`);
     }
+    // `\d*` or `\d{0,12}` is a mistake that matches between every character.
+    if (new RegExp(`^(?:${def.regex})$`, "u").test("")) {
+      throw new ConfigError(`${spec.id} pattern ${def.name}: matches the empty string`);
+    }
+    return { def, re };
   });
 
   function analyze(views: TextViews): Span[] {

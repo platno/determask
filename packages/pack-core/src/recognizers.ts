@@ -26,9 +26,17 @@ export const email = patternRecognizer({
       regex: "(?<![a-z0-9._%+'-])[a-z0-9._%+'-]+@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}",
       score: 0.9,
     },
+    {
+      name: "quoted",
+      // RFC 5321 quoted local part: "john smith"@example.com. The two
+      // branches start with different characters, so it stays linear.
+      regex: '"(?:[^"\\\\\\r\\n]|\\\\.){1,64}"@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}',
+      score: 0.9,
+    },
   ],
   validate: (folded) => {
-    const labels = folded.slice(folded.indexOf("@") + 1).split(".");
+    // the LAST "@": a quoted local part may contain one ("a@b"@example.com)
+    const labels = folded.slice(folded.lastIndexOf("@") + 1).split(".");
     if (ASSET_EXTENSIONS.has(labels[labels.length - 1] as string)) return false;
     // two numeric labels is a version (`app@1.0.0.tgz`); one is a real domain (`163.com`)
     return labels.filter((l) => /^\d+$/.test(l)).length < 2;
@@ -39,6 +47,7 @@ export const email = patternRecognizer({
       "Email: ⟪Đức.Trần@ví-dụ.vn⟫",
       "mailto:⟪jane.o'neil@acme.io⟫ or ⟪wang.li@163.com⟫",
       "typo still identifies: ⟪jane..doe@acme.io⟫ and ⟪jane.@acme.io⟫",
+      'quoted: ⟪"john smith"@example.com⟫, ⟪"a@b"@acme.io⟫ and ⟪"say \\"hi\\""@acme.io⟫',
     ],
     noMatch: [
       // sam247/openredaction#165: technical strings in logs
@@ -49,6 +58,7 @@ export const email = patternRecognizer({
       "user@acme.123",
       "weird {x}@acme.io",
       "logo@3x.webp and app@1.0.0.tgz",
+      '"x"@acme.123 and "logo"@2x.png',
     ],
   },
 });

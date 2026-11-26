@@ -56,8 +56,18 @@ describe("patternRecognizer — matching on the folded view", () => {
   });
 
   it("skips empty matches instead of looping forever", () => {
-    const spec = base({ patterns: [{ name: "opt", regex: "(?:ab\\d{3})?", score: 0.6 }] });
-    expect(find(spec, "x ab123 y")).toHaveLength(1);
+    // (?=z) cannot match "" on its own, so it loads, but it matches zero-length before each z.
+    const spec = base({ patterns: [{ name: "opt", regex: "ab\\d{3}|(?=z)", score: 0.6 }] });
+    expect(find(spec, "x ab123 zz y")).toHaveLength(1);
+  });
+
+  it("refuses a pattern that matches the empty string", () => {
+    for (const regex of ["\\d*", "\\d{0,12}", "(?:ab\\d{3})?", "a|"]) {
+      expect(() => patternRecognizer(base({ patterns: [{ name: "opt", regex, score: 0.6 }] }))).toThrow(
+        "pattern opt: matches the empty string",
+      );
+    }
+    expect(() => patternRecognizer(base({ patterns: [{ name: "ok", regex: "\\d{3}", score: 0.6 }] }))).not.toThrow();
   });
 
   it("records the pattern in the trace", () => {
