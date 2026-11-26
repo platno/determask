@@ -33,6 +33,10 @@ describe("foldText — the matching view (D4)", () => {
     expect(foldText("فاطمة مصطفى").text).toBe("فاطمه مصطفي");
   });
 
+  it("turns every dash into a hyphen-minus", () => {
+    expect(foldText("0912–345—678 ‐ ‑ ‒ ― − ﹘ ﹣ － ⸺ ⸻").text).toBe("0912-345-678 - - - - - - - - - -");
+  });
+
   it("drops the Arabic tatweel, mapping the rest back to the original", () => {
     const view = foldText("محـــمد");
     expect(view.text).toBe("محمد");

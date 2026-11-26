@@ -19,6 +19,13 @@ describe("matchKnownValues — spellings without a diacritic or as two letters (
     expect(surfaces("المريض محـــمد", { PERSON: ["محمد"] })).toEqual(["محـــمد"]);
     expect(surfaces("فاطمه و مصطفي", { PERSON: ["فاطمة", "مصطفى"] })).toEqual(["فاطمه", "مصطفي"]);
   });
+
+  it("matches a number grouped with en or em dashes", () => {
+    expect(surfaces("SĐT 0912–345–678, fax 0912—345—679", { PHONE_NUMBER: ["0912345678", "0912 345 679"] })).toEqual([
+      "0912–345–678",
+      "0912—345—679",
+    ]);
+  });
 });
 
 describe("matchKnownValues (D11)", () => {
