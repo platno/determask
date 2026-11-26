@@ -27,6 +27,7 @@ jobs:
       - run: pnpm test                 # fails below 100% line/branch/function coverage
       - run: pnpm smoke                # the built package, README example, on Node
       - run: pnpm lint:redos
+      - run: pnpm lint:scale           # the whole engine is linear in the text length
 
   runtimes:
     # D1: the same built package gives byte-identical results on Bun and Deno.

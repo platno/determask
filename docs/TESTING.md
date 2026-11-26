@@ -2,7 +2,7 @@
 
 determask is a privacy tool, so a test suite that only *runs* code is not
 enough: it has to prove that what the README promises is true, and fail
-the day it stops being true. Six layers do that.
+the day it stops being true. Eight layers do that.
 
 | Layer | Where | What it proves |
 |---|---|---|
@@ -12,6 +12,8 @@ the day it stops being true. Six layers do that.
 | Coverage gate | `vitest.config.ts` | 100% lines, branches, functions, statements — CI fails below |
 | Cross-runtime smoke | `scripts/smoke.mjs` | the **built** package gives identical output on Node, Bun and Deno |
 | Type-check of tests | `tsconfig.test.json` | tests compile under the same strict settings as the source |
+| ReDoS gate | `scripts/redos-lint.mjs` | every built-in pattern is linear on hostile input |
+| Scale gate | `scripts/scale-lint.mjs` | analyze → anonymize → restore, all packs loaded, is linear in the text length |
 
 ## The claims ledger
 
@@ -76,6 +78,26 @@ and the fail-closed paths, with no test framework and no runtime-specific
 API. CI runs it on Node 22 and 24 (`test` job) and on Bun and Deno
 (`runtimes` job). Running Vitest through `bun x` would execute Node, not
 Bun, which is why the runtimes are checked with the smoke script instead.
+
+## Linear time
+
+Long inputs are normal (a day of logs, a support export, a transcript),
+so a quadratic step is a denial of service, not a slowdown. Two gates run
+on the built packages, each probe in a child process killed at a deadline
+so a regression cannot hang CI:
+
+- `pnpm lint:redos` times every built-in pattern on hostile inputs at
+  sizes n and 4n;
+- `pnpm lint:scale` times the whole engine on five long documents — a log
+  with a finding on every line, a page of numbers with no context words, a
+  labelled record from every pack, whitespace and format-character runs,
+  and plain prose — and fails when 4× the text costs more than 8× the time.
+
+The scale gate exists because three quadratic steps passed every other
+layer: an unbounded `indexOf` in the context-word check, `endsWith` on the
+string being folded, and `anonymize` rebuilding the text once per span. A
+1.2 MB log took over a minute to analyse; it now takes about a third of a
+second.
 
 ## Test data
 

@@ -95,10 +95,11 @@ function foldWords(words: readonly string[] | undefined, what: string): string[]
 
 /** Does `word` occur as a whole word inside folded[from, to)? */
 function hasWord(folded: string, from: number, to: number, word: string): boolean {
-  let at = folded.indexOf(word, from);
-  while (at !== -1 && at + word.length <= to) {
-    if (hasWordBoundaries(folded, at, at + word.length)) return true;
-    at = folded.indexOf(word, at + 1);
+  // Search the window only: an unbounded indexOf scans to the end of the
+  // document whenever the word is absent, making analyze quadratic.
+  const window = folded.slice(from, to);
+  for (let at = window.indexOf(word); at !== -1; at = window.indexOf(word, at + 1)) {
+    if (hasWordBoundaries(folded, from + at, from + at + word.length)) return true;
   }
   return false;
 }
